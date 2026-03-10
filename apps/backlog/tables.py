@@ -150,3 +150,56 @@ class ECDesTeamTable(tables.Table):
         fields = ("ec_code", "reference", "description", "requester", "actions")
         attrs = {"class": "table table-hover align-middle mb-0"}
         empty_text = "Nenhum EC enviado para a DES no momento."
+
+
+class ECRequesterTable(tables.Table):
+    ec_code = tables.TemplateColumn(
+        verbose_name="Referencia",
+        orderable=False,
+        template_code="""<a href="{% url 'backlog:ec_detail' record.id %}" class="text-decoration-none">{{ record.reference }}</a>""",
+    )
+    versions = tables.TemplateColumn(
+        verbose_name="Versões",
+        orderable=False,
+        template_code="""
+            <div class="d-flex align-items-center gap-1">
+                {% for v in record.versions %}
+                    {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
+                    <span class="badge {% if forloop.last %}text-bg-dark{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
+                        {{ v }}
+                    </span>
+                {% empty %}
+                    <span class="text-muted small">Sem versões</span>
+                {% endfor %}
+            </div>
+        """,
+    )
+    status = tables.TemplateColumn(
+        verbose_name="Estado",
+        orderable=False,
+        template_code="""
+            {% if record.status == "approved" %}
+                <span class="badge text-bg-success">Aprovado</span>
+            {% elif record.status == "rejected" %}
+                <span class="badge text-bg-danger">Rejeitado</span>
+            {% elif record.status == "in_validation" %}
+                <span class="badge text-bg-warning text-dark">Em Validação</span>
+            {% elif record.status == "sent_to_des" %}
+                <span class="badge text-bg-info">Enviada para DES</span>
+            {% else %}
+                <span class="badge text-bg-secondary">{{ record.status }}</span>
+            {% endif %}
+        """,
+    )
+    latest_comment = tables.TemplateColumn(
+        verbose_name="Comentário do CD",
+        orderable=False,
+        template_code="""<span class="text-body-secondary small text-truncate d-inline-block" style="max-width: 18rem;">{{ record.latest_comment|default:"Sem comentários." }}</span>""",
+    )
+
+    class Meta:
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ("ec_code", "versions", "status", "latest_comment")
+        attrs = {"class": "table table-hover align-middle mb-0"}
+        empty_text = "Nenhuma EC encontrada."
+    
