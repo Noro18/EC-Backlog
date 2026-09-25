@@ -395,3 +395,16 @@ body.app-shell {
     --tt-slate-text: #e5e5e5;
     --tt-slate-border: #4a4a4a;
 }
+
+
+/* ==========================================================================
+   Cards: visible border — grey in light mode, white in dark mode
+   ========================================================================== */
+.dash-widgets .card.border-0 {
+    border-width: 1px !important;
+    border-style: solid !important;
+}
+.dash-widgets .card { --bs-card-border-color: rgba(218, 213, 213, 0.2); }
+[data-bs-theme="dark"] .dash-widgets .card { --bs-card-border-color: rgba(255, 255, 255, 0.55); }
+
+
