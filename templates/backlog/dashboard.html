@@ -64,62 +64,66 @@
             <div class="col-lg-7">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">
-                        Versões por documento
+                        Progresso das versões e rejeições
+                        <p class="text-muted mb-1">A versão atual aparece em destaque.</p>
                     </div>
-                    <div class="card-body pt-2 pb-3">
-                        <canvas id="reqChartVersions"></canvas>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr class="text-muted small">
+                                        <th class="ps-3 fw-semibold">EC</th>
+                                        <th class="fw-semibold">Versões</th>
+                                        <th class="fw-semibold">Estado</th>
+                                        <th class="fw-semibold">Comentário do CD</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in req.my_ecs %}
+                                    <tr>
+                                        <td class="ps-3 fw-semibold">
+                                            <a href="{% url 'backlog:ec_detail' item.id %}" class="text-decoration-none">{{ item.reference }}</a>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-1">
+                                                {% for v in item.versions %}
+                                                    {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
+                                                    <span class="badge {% if forloop.last %}text-bg-dark{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
+                                                        {{ v }}
+                                                    </span>
+                                                {% empty %}
+                                                    <span class="text-muted small">Sem versões</span>
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if item.status == "approved" %}
+                                                <span class="badge text-bg-success">Aprovado</span>
+                                            {% elif item.status == "rejected" %}
+                                                <span class="badge text-bg-danger">Rejeitado</span>
+                                            {% elif item.status == "in_validation" %}
+                                                <span class="badge text-bg-warning text-dark">Em Validação</span>
+                                            {% elif item.status == "sent_to_des" %}
+                                                <span class="badge text-bg-info">Enviada para DES</span>
+                                            {% else %}
+                                                <span class="badge text-bg-secondary">{{ item.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-body-secondary small text-truncate" style="max-width: 18rem;">
+                                            {{ item.latest_comment|default:"Sem comentários." }}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-3">Nenhuma EC encontrada.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        {# --- Rejections needing action --- #}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6 text-danger">
-                Rejeitados — precisam da sua ação
-            </div>
-            <ul class="list-group list-group-flush">
-                {% for item in req.needs_action %}
-                <li class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <a href="{% url 'backlog:ec_detail' item.id %}" class="fw-semibold text-decoration-none">
-                            {{ item.reference }}
-                        </a>
-                        <small class="text-muted">
-                            v{{ item.version }} · {{ item.cd }} · {{ item.decided_at|date:"d/m/Y H:i" }}
-                        </small>
-                    </div>
-                    <div class="text-muted small mt-1">{{ item.comment|default:"Sem comentário." }}</div>
-                </li>
-                {% empty %}
-                <li class="list-group-item text-muted">Nada rejeitado — nada pendente da sua parte.</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        {# --- Recent uploads --- #}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">Últimos documentos</div>
-            <ul class="list-group list-group-flush">
-                {% for item in req.recent_versions %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>{{ item.reference }} <small class="text-muted">{{ item.version }}</small></span>
-                    <span>
-                        {% if item.decision == "approved" %}
-                        <span class="badge text-bg-success">Aprovado</span>
-                        {% elif item.decision == "rejected" %}
-                        <span class="badge text-bg-danger">Rejeitado</span>
-                        {% elif item.decision %}
-                        <span class="badge text-bg-secondary">{{ item.decision }}</span>
-                        {% else %}
-                        <span class="badge text-bg-warning">A aguardar CD</span>
-                        {% endif %}
-                    </span>
-                </li>
-                {% empty %}
-                <li class="list-group-item text-muted">Ainda não enviou documentos.</li>
-                {% endfor %}
-            </ul>
         </div>
 
         {{ req.by_status|json_script:"req-status" }}

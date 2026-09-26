@@ -153,6 +153,42 @@ class TestRequesterDashboard:
 
         assert requester_dashboard(user)["by_status"]["in_validation"] == 1
 
+    def test_my_ecs_lists_each_ec_with_reference_and_status(self):
+        user = UserFactory(role=User.Role.REQUESTER)
+        ECFactory(requester=user, reference="COR2026001")
+        ECFactory(requester=user, reference="COR2026002")
+
+        my_ecs = requester_dashboard(user)["my_ecs"]
+
+        assert [row["reference"] for row in my_ecs] == ["COR2026002", "COR2026001"]
+        assert all(row["status"] == EC.Status.IN_VALIDATION for row in my_ecs)
+        assert all(row["versions_count"] == 0 for row in my_ecs)
+        assert all(row["versions"] == [] for row in my_ecs)
+
+    def test_my_ecs_counts_uploaded_versions(self):
+        user = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=user, reference="COR2026003")
+        self._upload(ec, "v1")
+        self._upload(ec, "v2")
+
+        my_ecs = requester_dashboard(user)["my_ecs"]
+
+        assert len(my_ecs) == 1
+        assert my_ecs[0]["id"] == ec.id
+        assert my_ecs[0]["reference"] == "COR2026003"
+        assert my_ecs[0]["status"] == EC.Status.IN_VALIDATION
+        assert my_ecs[0]["versions_count"] == 2
+        assert my_ecs[0]["versions"] == ["v1", "v2"]
+
+    def test_my_ecs_excludes_other_requesters(self):
+        mine = UserFactory(role=User.Role.REQUESTER)
+        ECFactory(requester=mine, reference="COR2026004")
+        ECFactory(requester=UserFactory(role=User.Role.REQUESTER), reference="COR2026005")
+
+        my_ecs = requester_dashboard(mine)["my_ecs"]
+
+        assert [row["reference"] for row in my_ecs] == ["COR2026004"]
+
     def test_uploaded_but_undecided_counts_as_in_validation(self):
         user = UserFactory(role=User.Role.REQUESTER)
         self._upload(ECFactory(requester=user), "v1")

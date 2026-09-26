@@ -110,7 +110,11 @@ def requester_dashboard(user) -> dict:
     (`in_validation`, `approved`, `rejected`, `sent_to_des`, `closed`),
     excluding cancelled.
     """
-    ec_qs = EC.objects.filter(requester=user).exclude(status=EC.Status.CANCELLED)
+    ec_qs = (
+        EC.objects.filter(requester=user)
+        .exclude(status=EC.Status.CANCELLED)
+        .order_by("-year", "-number_sequence")
+    )
 
     rows = list(
         ec_qs.values(
@@ -137,6 +141,7 @@ def requester_dashboard(user) -> dict:
             bucket["versions"].append(row)
 
     by_status = {value: 0 for value, _label in EC.Status.choices if value != EC.Status.CANCELLED}
+    my_ecs = []
     needs_action = []
     versions_per_document = []
     total_versions = 0
@@ -172,8 +177,21 @@ def requester_dashboard(user) -> dict:
 
         if st in by_status:
             by_status[st] += 1
+        
+        version_list = [row["versions__version_number"] for row in versions]
+        latest_comment = latest["versions__review__comment"] if versions else ""
+
+        my_ecs.append({         
+            "id": ec_id,
+            "reference": data["reference"],
+            "status": st,
+            "versions_count": len(versions),
+            "versions": version_list,
+            "latest_comment": latest_comment,
+        })
 
     return {
+        "my_ecs": my_ecs,
         "ec_total": len(ecs),
         "versions_total": total_versions,
         "by_status": by_status,
