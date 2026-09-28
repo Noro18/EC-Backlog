@@ -1,0 +1,36 @@
+[project]
+name = "ec-backlog-management"
+version = "0.1.0"
+description = "EC Backlog Management System"
+readme = "README.md"
+authors = [
+    { name = "Noro18", email = "zeroxg534@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "django>=6.1.1",
+    "django-auditlog>=3.4.1",
+    "django-environ>=0.14.0",
+    "django-filter>=26.1",
+    "django-import-export>=4.4.1",
+    "django-q2>=1.11.1",
+    "django-tables2>=3.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "pytest-django",
+    "factory-boy",
+    "pre-commit",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
