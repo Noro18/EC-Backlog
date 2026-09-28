@@ -55,7 +55,6 @@ htmlcov/
 # IDE / editors
 .idea/
 .vscode/
-.opencode/
 *.swp
 *.swo
 *~
