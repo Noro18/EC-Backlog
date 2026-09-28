@@ -2,7 +2,7 @@
 
 ## Project Description
 
-EC Backlog Management is a Django-based web application designed to manage and track engineering change (EC) backlogs efficiently. It provides a structured workflow for submitting, reviewing, approving, and tracking engineering change requests across teams and projects.
+EC Backlog Management is a Django-based web application designed to manage and track **Especificação Configuração (EC)** backlogs efficiently. It provides a structured workflow for submitting, reviewing, approving, and tracking **specification configuration requests** across teams and projects.
 
 ## Tech Stack
 
@@ -36,7 +36,8 @@ uv sync
 
 # The virtual environment will be created at .venv/
 # All packages from pyproject.toml will be installed
-```
+``
+`
 
 ### Common Development Commands
 
