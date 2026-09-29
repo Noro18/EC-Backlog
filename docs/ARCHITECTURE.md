@@ -36,7 +36,7 @@ ec-backlog/
 │   └── workflow/
 ├── templates/                # Contains all HTML files. Structure inside is separated by app/feature.
 │   ├── base.html             # Application's main layout.
-│   ├── components/           # Reusable HTML components (navbar, sidebar, pagination, modal, etc.).
+│   ├── components/           # Reusable HTML components (navbar, sidebar, etc.).
 │   │   ├── navbar.html
 │   │   ├── sidebar.html
 │   ├── accounts/             # Templates specific to the 'accounts' app.
