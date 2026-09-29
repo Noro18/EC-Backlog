@@ -34,7 +34,23 @@ ec-backlog/
 │   ├── backlog/
 │   ├── documents/
 │   └── workflow/
-├── templates/
+├── templates/                # Contains all HTML files. Structure inside is separated by app/feature.
+│   ├── base.html             # Application's main layout.
+│   ├── components/           # Reusable HTML components (navbar, sidebar, etc.).
+│   │   ├── navbar.html
+│   │   ├── sidebar.html
+│   ├── accounts/             # Templates specific to the 'accounts' app.
+│   │   ├── login.html
+│   │   └── profile.html
+│   ├── backlog/              # Templates specific to the 'backlog' app.
+│   │   ├── ec_list.html
+│   │   ├── ec_detail.html
+│   │   ├── ec_form.html
+│   │   └── release_list.html
+│   ├── documents/            # Templates specific to the 'documents' app.
+│   │   └── document_history.html
+│   └── workflow/             # Templates specific to the 'workflow' app.
+│       └── review_ec.html
 ├── static/
 ├── docs/
 └── .opencode/              # skills and specs (committed; node_modules is ignored)
