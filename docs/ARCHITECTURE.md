@@ -38,7 +38,12 @@ ec-backlog/
 │   ├── base.html             # Application's main layout.
 │   ├── components/           # Reusable HTML components (navbar, sidebar, etc.).
 │   │   ├── navbar.html
-│   │   ├── sidebar.html
+│   │   └── sidebar/          # Modular sidebar templates per role.
+│   │       ├── sidebar.html
+│   │       ├── sidebar_requester.html
+│   │       ├── sidebar_cd.html
+│   │       ├── sidebar_des.html
+│   │       └── sidebar_admin.html
 │   ├── accounts/             # Templates specific to the 'accounts' app.
 │   │   ├── login.html
 │   │   └── profile.html
