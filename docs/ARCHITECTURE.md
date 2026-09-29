@@ -15,7 +15,13 @@ Workflow in one line: a Requester creates an EC, uploads the document, assigns a
 - Dev tools: ruff, pytest, pytest-django, factory-boy, pre-commit.
 - Add libraries with `uv add <pkg>` (runtime) or `uv add --dev <pkg>` (dev only). Always commit `pyproject.toml` and `uv.lock` together.
 - Run every command through `uv run`, for example `uv run python manage.py check`.
-- Database: SQLite vs PostgreSQL is **still undecided** (pending TT user count). Read it from `DATABASE_URL` via django-environ. Do not use engine-specific features (raw SQL, PostgreSQL-only fields) without asking.
+- Database: **SQLite, for both development and production** (decided 2026-09-29). The size of the team makes a single-file database proportionate and it removes a service to back up and monitor. The path still comes from `DATABASE_URL` via django-environ, so the engine stays swappable. Do not use engine-specific features (raw SQL, PostgreSQL-only fields) without asking.
+- **Consequences of SQLite, accepted deliberately:**
+  - Only one writer at a time. A write locks the whole database file, so a concurrent submission fails with `OperationalError: database is locked` after the timeout instead of waiting its turn. Handle or retry that path; never treat it as a validation error.
+  - `select_for_update()` is **silently ignored** here — Django reports `has_select_for_update = False` and the `FOR UPDATE` clause is dropped without error. Do not rely on row-level locking anywhere in this codebase.
+  - `journal_mode` is `delete` and the lock timeout is Django's 5s default. WAL mode and a longer `OPTIONS["timeout"]` are the known upgrades, deferred until lock errors are observed in production.
+  - SQLite does not enforce `varchar` lengths, so `max_length` on `FileField` is a form-validation and portability guard, not a database constraint.
+- The django-q2 worker runs as a **separate process with its own connection**, which is the most likely source of lock contention. Watch for task failures caused by `database is locked`.
 - Deployment target: Docker Compose (web + django-q2 worker + database). Pin image versions. Never publish the database port in the production compose file.
 
 ## 3. Folder structure
@@ -89,7 +95,7 @@ An arrow means "may import from". Each app may import only from apps to its righ
 - **EC ID:** unique, sequential, generated automatically. Historical IDs (2019–2026) are imported and **must be preserved**. Design generation so new IDs never collide with imported ones.
 - **Release ID format:** `TT_ON_AAAA-NNN` (for example `TT_ON_2026-001`). One Release has many ECs.
 - **Release capacity:** confirmed with the team — a Release is open while not all its ECs are closed, and it accepts at most **10 ECs**. When it reaches 10 it closes to new ECs, even if not all are approved or closed yet. If no Release is open, create a new one and assign the EC to it.
-- **Concurrency:** assigning an EC to a Release must not allow an 11th EC when two users submit at once. Use `transaction.atomic()` with `select_for_update()` on the Release row, and write a test for it.
+- **Concurrency:** assigning an EC to a Release must not allow an 11th EC when two users submit at once. The capacity check runs inside `transaction.atomic()` and the rule is enforced by SQLite's exclusive write lock, **not** by `select_for_update()` — that call is a silent no-op on this engine (see section 2). Consequence: if the project ever moves to PostgreSQL, an 11th EC becomes possible and the guard must be reinstated, because nothing in the code will catch it. Test the capacity rule sequentially; do not claim a passing concurrent-write test as proof, since it passes for the wrong reason on SQLite.
 - **Statuses:** In Validation, Approved, Rejected, Sent to DES, Closed, Cancelled. Transitions are automatic, driven by `workflow`.
 - **Rejection:** the CD must record a comment. The requester corrects and uploads a new document version. The EC ID stays the same and the version increments automatically (v1.0, v1.1, v2.0). All previous versions are kept.
 - **Notifications:** email the CD on assignment (RF08) and notify the requester of the decision (RF10). Sending must be reliable, with retry or an alert on failure (RNF03).
@@ -99,17 +105,19 @@ An arrow means "may import from". Each app may import only from apps to its righ
 
 ## 8. Database and migrations
 
-- The custom user model `accounts.User` (`AUTH_USER_MODEL = "accounts.User"`) exists **before** the first migration. Never change it afterwards.
+- `AUTH_USER_MODEL = "accounts.User"` is **permanent**. The table name, the primary key and the `username` / `password` / `role` columns are referenced by `admin`, `auth` and `auditlog`, so they are never renamed, retyped or removed.
+- Additive changes to `accounts.User` (new fields, new role values, new constraints) are allowed in a normal migration, as they were pre-release on 2026-09-29 when `name` was added and `email` was made unique. Ship them in a **new** migration, never by editing `0001_initial`.
+- Renaming or dropping an existing `accounts.User` column, or changing `AUTH_USER_MODEL`, requires explicit user approval and a written data migration first.
 - Never edit a migration that has been applied or committed, unless fixing a circular dependency.
 - After changing any model, follow `.opencode/skills/django-db-integrity/SKILL.md`.
-- Before any production migration: take a database backup first.
-- Never run destructive commands (`flush`, `reset_db`, dropping tables, `docker compose down -v`) without explicit user approval.
+- Before any production migration: take a database backup first. On SQLite, copy the database with `sqlite3 db.sqlite3 ".backup backups/backup.db"` or stop the app first — `cp` during an active write produces a torn file.
+- Never run destructive commands (`flush`, `reset_db`, dropping tables, `docker compose down -v`) without explicit user approval. `db.sqlite3` is the entire production dataset; losing it loses every EC, document and audit record, so treat it as irreplaceable.
 
 ## 9. Testing
 
 - Follow `.opencode/skills/django-tdd-loop/SKILL.md`: failing test first, then the minimum code, then refactor.
 - Tests live in `apps/<app>/tests/` (`test_models.py`, `test_services.py`, `test_views.py`) with test data in `factories.py` using factory-boy.
-- Required tests: Release capacity (including concurrent creation), version increment on resubmission, status transitions and who may perform them, notification sending and failure handling, CSV/Excel import dry-run.
+- Required tests: Release capacity, version increment on resubmission, status transitions and who may perform them, notification sending and failure handling, CSV/Excel import dry-run. Capacity is tested **sequentially** (the 11th EC is refused); a true concurrent-write test cannot be written on SQLite, because SQLite's whole-file write lock makes it pass regardless of the code under test. See section 2.
 - Run `uv run pytest` (or `uv run python manage.py test <app>`) and `uv run ruff check .` before declaring work finished.
 
 ## 10. Workflow with the user
@@ -125,4 +133,4 @@ An arrow means "may import from". Each app may import only from apps to its righ
 - `DEBUG = False`, a long random `SECRET_KEY`, and `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` set to the server address in production.
 - Run `uv run python manage.py check --deploy` and address every warning, or record why it is accepted.
 - Uploaded documents are validated (type and size) and stored outside the code tree on a persistent volume.
-- Backups are stored on a different machine, and a restore has been tested at least once.
+- Backups are stored on a different machine, and a restore has been tested at least once. On SQLite this is the whole production database in one file: back it up with the `.backup` command, never `cp` while the server is writing.
