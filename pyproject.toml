@@ -33,5 +33,11 @@ package = false
 line-length = 100
 extend-exclude = ["*/migrations/*"]
 
+[tool.ruff.lint]
+# RUF012 is a known false positive for Django: Meta.constraints / Meta.indexes,
+# ModelAdmin.list_display / readonly_fields and Field(choices=...) are
+# intentionally plain class attributes.
+ignore = ["RUF012"]
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
