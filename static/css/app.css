@@ -1,0 +1,21 @@
+.nav-section {
+    margin: 0.5rem 0 0.5rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+
+#sidebarMenu .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    color: var(--bs-secondary-color);
+}
+
+#sidebarMenu .nav-link:hover {
+    background-color: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}

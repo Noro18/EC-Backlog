@@ -5,34 +5,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sistema de Gestão de Backlog EC{% endblock %}</title>
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-light">
 
-    <!-- Navbar -->
     {% include 'components/navbar.html' %}
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            {% include 'components/sidebar.html' %}
+    <div class="d-flex">
+        <aside id="sidebarMenu" class="col-lg-2 bg-white border-end vh-100 p-3 flex-shrink-0 overflow-auto">
 
-            <!-- Main Content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
-                {% block content %}
-                {% endblock %}
-            </main>
-        </div>
+            <p class="nav-section">Main</p>
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-speedometer2"></i> Painel</a></li>
+            </ul>
+
+            {% if user.is_authenticated %}
+            <p class="nav-section">Lancamento</p>
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-kanban"></i> Gestão de Lancamento</a></li>
+            </ul>
+            {% endif %}
+
+            {% if user.role == 'REQUESTER' %}
+            <p class="nav-section">Solicitações</p>
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-file-earmark-text"></i> Solicitação</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-plus-circle"></i> Nova Solicitação</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-list-check"></i> Minhas Solicitações</a></li>
+            </ul>
+            {% endif %}
+
+            {% if user.role == 'CD' or user.role == 'ADMIN' %}
+            <p class="nav-section">Aprovações</p>
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-clock-history"></i> Solicitações Pendentes</a></li>
+                {% if user.role == 'CD' %}
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-folder2-open"></i> ECs do Departamento</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-check-circle"></i> Histórico de Aprovações</a></li>
+                {% endif %}
+            </ul>
+            {% endif %}
+
+            {% if user.role == 'DES' %}
+            <p class="nav-section">Consulta</p>
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-search"></i> Consultar ECs</a></li>
+            </ul>
+            {% endif %}
+
+            {% if user.role == 'ADMIN' %}
+            <p class="nav-section">Gestão</p>
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-journals"></i> Gestão de ECs</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-people"></i> Gestão de Utilizadores</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-folder-check"></i> Versões de Documentos</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-journal-text"></i> Registo de Auditoria</a></li>
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-bar-chart"></i> Relatórios</a></li>
+            </ul>
+
+            <p class="nav-section">Administração</p>
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-gear"></i> Configurações</a></li>
+            </ul>
+            {% endif %}
+        </aside>
+
+        <main class="flex-grow-1 p-4">
+            {% block content %}{% endblock %}
+        </main>
     </div>
 
-    <!-- Bootstrap Bundle JS -->
     <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
-    <!-- HTMX -->
     <script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
+    <script>
+        const menu = document.getElementById('sidebarMenu');
+        menu.addEventListener('click', (e) => {
+            const link = e.target.closest('.nav-link');
+            menu.querySelectorAll('.nav-link').forEach((el) => {
+                el.classList.remove('active', 'bg-info', 'text-white');
+            });
+            link.classList.add('active', 'bg-info', 'text-white');
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
