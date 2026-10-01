@@ -1,72 +1,41 @@
+/* ---------------------------------------------------------------------------
+   Inter (self-hosted variable font, weights 100-900)
+   Source: Inter by The Inter Project Authors — SIL Open Font License 1.1
+   License text: static/fonts/OFL.txt
+--------------------------------------------------------------------------- */
+@font-face {
+    font-family: "Inter";
+    src: url("../fonts/InterVariable.woff2") format("woff2-variations");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+   Typography
+   Bootstrap picks Inter up through its own CSS variables; the system stack
+   stays as fallback so the app still looks native if the font fails to load.
+--------------------------------------------------------------------------- */
 :root {
-    /* TT Brand Colors */
-    --tt-blue-digital: #005EFF;
-    --tt-blue-timor: #00CFFF;
-    --tt-dark-grey: #141414;
-
-    /* TT Status & Accent Palette (soft, readable, combines well) */
-    --tt-yellow: #FABD0D;
-    --tt-yellow-bg: #FFFBF0;
-    --tt-yellow-text: #4B3904;
-    --tt-yellow-border: #FDE192;
-
-    --tt-green: #00FFB2;
-    --tt-green-bg: #F0FFFA;
-    --tt-green-text: #004C35;
-    --tt-green-border: #8CFFDC;
-
-    --tt-red: #FF0F1F;
-    --tt-red-bg: #FFF1F2;
-    --tt-red-text: #4C0409;
-    --tt-red-border: #FF939A;
-
-    --tt-cyan: #00CFFF;
-    --tt-cyan-bg: #F0FCFF;
-    --tt-cyan-text: #003E4C;
-    --tt-cyan-border: #8CE9FF;
-
-    --tt-blue: #005EFF;
-    --tt-blue-bg: #F0F5FF;
-    --tt-blue-text: #001C4C;
-    --tt-blue-border: #8CB7FF;
-
-    --tt-slate: #303030;
-    --tt-slate-bg: #F3F3F3;
-    --tt-slate-text: #0E0E0E;
-    --tt-slate-border: #A2A2A2;
-
-    /* Bootstrap overrides */
-    --bs-primary: var(--tt-blue-digital);
-    --bs-primary-rgb: 0, 94, 255;
-    --bs-link-color: var(--tt-blue-digital);
-    --bs-link-color-rgb: 0, 94, 255;
-    --bs-link-hover-color: #0043b3;
-    --bs-link-hover-color-rgb: 0, 67, 179;
-    --bs-info: var(--tt-blue-timor);
-    --bs-info-rgb: 0, 207, 255;
+    --bs-font-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+    --bs-body-font-family: var(--bs-font-sans-serif);
+    --bs-body-font-size: 0.9375rem;
+    --bs-body-line-height: 1.5;
+    --bs-body-color: #1f2733;
 }
 
-.btn-primary {
-    --bs-btn-bg: var(--tt-blue-digital);
-    --bs-btn-border-color: var(--tt-blue-digital);
-    --bs-btn-hover-bg: var(--bs-link-hover-color);
-    --bs-btn-hover-border-color: var(--bs-link-hover-color);
-    --bs-btn-active-bg: var(--bs-link-hover-color);
-    --bs-btn-active-border-color: var(--bs-link-hover-color);
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
-.navbar.bg-info {
-    --bs-navbar-color: var(--tt-dark-grey);
-    --bs-navbar-hover-color: var(--tt-dark-grey);
-    --bs-navbar-active-color: var(--tt-dark-grey);
-    --bs-navbar-brand-color: var(--tt-dark-grey);
-    --bs-navbar-brand-hover-color: var(--tt-dark-grey);
-    --bs-navbar-toggler-border-color: transparent;
-    --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23141414' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
-}
-
-.navbar.bg-info .text-white {
-    color: var(--tt-dark-grey) !important;
+h1, h2, h3, h4, h5, h6,
+.card-header,
+.modal-header .modal-title {
+    font-weight: 600;
+    letter-spacing: -0.01em;
 }
 
 .nav-section {
@@ -74,6 +43,7 @@
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.06em;
     color: var(--bs-secondary-color);
 }
 
@@ -91,84 +61,92 @@
     color: var(--bs-body-color);
 }
 
-#sidebarMenu .nav-link.active,
-#sidebarMenu .nav-link:focus-visible,
-#sidebarMenu .nav-link[aria-current="page"] {
-    background-color: var(--tt-blue-digital);
-    color: #ffffff;
-}
-
-/* Status badges - soft TT palette (kombinasi kuning,hijau,merah,abu) */
-.badge.bg-warning,
-.badge.text-bg-warning {
-    background-color: var(--tt-yellow-bg) !important;
-    color: var(--tt-yellow-text) !important;
-    border: 1px solid var(--tt-yellow-border);
-    font-weight: 600;
-}
-
-.badge.bg-success,
-.badge.text-bg-success {
-    background-color: var(--tt-green-bg) !important;
-    color: var(--tt-green-text) !important;
-    border: 1px solid var(--tt-green-border);
-    font-weight: 600;
-}
-
-.badge.bg-danger,
-.badge.text-bg-danger {
-    background-color: var(--tt-red-bg) !important;
-    color: var(--tt-red-text) !important;
-    border: 1px solid var(--tt-red-border);
-    font-weight: 600;
-}
-
-.badge.bg-secondary,
-.badge.text-bg-secondary {
-    background-color: var(--tt-slate-bg) !important;
-    color: var(--tt-slate-text) !important;
-    border: 1px solid var(--tt-slate-border);
-    font-weight: 600;
-}
-
-.badge.bg-info,
-.badge.text-bg-info {
-    background-color: var(--tt-cyan-bg) !important;
-    color: var(--tt-cyan-text) !important;
-    border: 1px solid var(--tt-cyan-border);
-    font-weight: 600;
-}
-
-/* Timeline (Histórico) - gaya git branch: garis vertikal + titik
-   Markup: <ul class="ec-timeline"> dengan <li> di dalamnya.
-   Garis dibuat dengan border-left pada <ul>, titik dengan ::before
-   pada <li>. Item terakhir tidak diberi garis bawah. */
-.ec-timeline {
-    list-style: none;
-    margin: 0;
-    padding-left: 1.25rem;
-    border-left: 2px solid var(--tt-blue-border);
-}
-
-.ec-timeline > li {
-    position: relative;
-    margin-bottom: 1rem;
-}
-
-.ec-timeline > li:last-child {
+/* ---------------------------------------------------------------------------
+   django-tables2: table skin
+--------------------------------------------------------------------------- */
+table.table {
+    --bs-table-bg: transparent;
     margin-bottom: 0;
 }
 
-/* Titik di garis. left -1.25rem + 2px border = titik pas di garis. */
-.ec-timeline > li::before {
-    content: "";
-    position: absolute;
-    left: -1.25rem;
-    top: 0.35rem;
-    width: 0.625rem;
-    height: 0.625rem;
-    border-radius: 50%;
-    background-color: var(--tt-blue);
-    /* Cincin putih memotong garis di belakang titik, biar terlihat bersih */
-    box-shadow: 0 0 0 3px var(--bs-body-bg);
+/* Header: small, uppercase, muted — the header should not shout over the data */
+table.table thead th {
+    background-color: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    border-top: none;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* Sort links stop looking like links; hover hints they are clickable */
+table.table th a {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+table.table th a:hover {
+    color: var(--bs-primary);
+}
+
+/* Sort direction arrows: dts2 already puts .asc / .desc on the sorted <th> */
+table.table th.asc a::after,
+table.table th.desc a::after {
+    font-family: "bootstrap-icons";
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+table.table th.asc a::after {
+    content: "\f139"; /* bi-sort-up */
+}
+
+table.table th.desc a::after {
+    content: "\f0ca"; /* bi-sort-down */
+}
+
+table.table th.orderable a {
+    cursor: pointer;
+}
+
+/* Body rows */
+table.table tbody td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.875rem;
+    border-color: var(--bs-border-color-translucent, rgba(0, 0, 0, 0.06));
+    vertical-align: middle;
+}
+
+table.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+table.table tbody tr:hover > * {
+    background-color: var(--bs-tertiary-bg);
+}
+
+table.table tbody tr {
+    transition: background-color 0.1s ease-in-out;
+}
+
+/* Badges: softer, not shouting */
+table.table .badge {
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.35em 0.6em;
+    letter-spacing: 0.01em;
+}
+
+/* Numbers, dates and IDs align vertically and read as data */
+table.table td.font-monospace,
+table.table td .fw-semibold {
+    font-variant-numeric: tabular-nums;
 }

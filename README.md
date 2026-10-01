@@ -8,7 +8,7 @@ EC Backlog Management is a Django-based web application designed to manage and t
 
 - **Language**: Python 3.12+
 - **Framework**: Django 6.1+
-- **Database**: SQLite (development) / PostgreSQL (production)
+- **Database**: SQLite
 - **Task Queue**: Django-Q2 (background task processing)
 - **Filtering**: Django-Filter (API query filtering)
 - **Tables**: Django-Tables2 (tabular data rendering)
