@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
 from apps.backlog.tests.factories import UserFactory
+from apps.documents.models import DocumentVersion
 from apps.documents.tests.factories import DocumentVersionFactory
 from apps.workflow.models import Review
 from apps.workflow.tests.factories import ReviewFactory
@@ -114,7 +115,7 @@ class TestOneReviewPerVersion:
         assert not Review.objects.filter(document_version=version).exists()
         assert getattr(version, "review", None) is None
 
-        with pytest.raises(Review.document_version.RelatedObjectDoesNotExist):
+        with pytest.raises(DocumentVersion.review.RelatedObjectDoesNotExist):
             version.review
 
 
