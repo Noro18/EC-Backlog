@@ -22,13 +22,6 @@ class User(AbstractUser):
         verbose_name = "User"
         verbose_name_plural = "Users"
 
-    def save(self, *args, **kwargs):
-        if self.name and not self.first_name and not self.last_name:
-            parts = self.name.split(" ", 1)
-            self.first_name = parts[0]
-            # self.last_name = parts[1] if len(parts) > 1 else ""
-        super().save(*args, **kwargs)
-
     @property
     def full_name(self):
         return self.name or f"{self.first_name} {self.last_name}".strip()

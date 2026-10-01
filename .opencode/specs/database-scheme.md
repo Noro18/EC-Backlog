@@ -86,7 +86,7 @@ Extends `AbstractUser`. Existing table `accounts_user`.
 | ERD name | Django field | Notes |
 |---|---|---|
 | `id` | `id` | |
-| `name` | `name` | `CharField(max_length=150, blank=True)`. The real model has a dedicated `name` column; `first_name` / `last_name` are also kept in sync from it in `save()` |
+| `name` | `name` | `CharField(max_length=150, blank=True)`. The real model has a dedicated `name` column. `first_name` / `last_name` are inherited from `AbstractUser` and intentionally left unused; display via `name` or the `full_name` property (decision: removed the `save()` sync, 2026-10-01) |
 | `email` | `email` | `EmailField(unique=True)`, inherited from `AbstractUser` and tightened to unique |
 | `role` | `role` | `CharField(max_length=20, choices=Role.choices)`; values: `requester`, `cd`, `des_team`, `administrator`. Default `requester` |
 | `active` | `is_active` | Inherited from `AbstractUser`. **Not redeclared** in the model: an explicit redeclaration only produced a no-op migration |
