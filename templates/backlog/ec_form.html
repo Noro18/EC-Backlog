@@ -1,10 +1,146 @@
 {% extends "base.html" %}
 
-{% block title %}Lista EC{% endblock %}
+{% block title %}Sistema de Gestão de Backlog EC{% endblock %}
 
 {% block content %}
 
+<div class="mb-3">
+    <h3 class="mb-1">Nova Solicitação de EC</h3>
+    <p class="text-muted mb-0">Preencha os dados da solicitação abaixo.</p>
+</div>
 
-<h1>ida ne ba form EC nian yaahh</h1>
+<form action="#" method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <div class="card">
+        <div class="card-header bg-white fw-semibold">Identificação</div>
+        <div class="card-body">
+            <div class="row g-3">
+
+                <div class="col-md-4">
+                    <label for="id_ec_id" class="form-label">EC ID</label>
+                    <input type="text" class="form-control" id="id_ec_id" name="ec_id" readonly>
+                    <div class="form-text">O número é preenchido automaticamente pelo sistema.</div>
+                </div>
+
+                <div class="col-md-8">
+                    <label for="id_title" class="form-label">Título <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="id_title" name="title" required maxlength="200">
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="reference" class="form-label">Referencia (CR / RT / COR)</label>
+                    <input type="text" class="form-control" id="reference" name="nu_reference"  placeholder="ex: CR2026003">
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="card mt-3">
+        <div class="card-header bg-white fw-semibold">Descrição</div>
+        <div class="card-body">
+            <label for="id_description" class="form-label">Descrição da EC <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="id_description" name="description" rows="5" required></textarea>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header bg-white fw-semibold">Documento</div>
+        <div class="card-body">
+            <label for="id_document" class="form-label">Especificação (.pdf, .doc, .docx)</label>
+            <input type="file" class="form-control" id="id_document" name="document">
+        </div>
+    </div>
+
+        <div class="card mt-3">
+        <div class="card-header bg-white fw-semibold">Lancamento</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="id_release" class="form-label">ID Lancamento</label>
+                    <select class="form-select" id="id_release" name="release">
+                        <option value="">TT_ON_2026-001</option>
+                        <option value="">TT_ON_2026-002</option>
+                        <option value="">+ Cria Nova Release</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {% comment %} <div class="card mt-3">
+        <div class="card-header bg-white fw-semibold">Classificação</div>
+        <div class="card-body">
+            <div class="row g-3">
+
+                <div class="col-md-4">
+                    <label for="id_priority" class="form-label">Prioridade</label>
+                    <select class="form-select" id="id_priority" name="priority">
+                        <option value="low">Baixa</option>
+                        <option value="medium" selected>Média</option>
+                        <option value="high">Alta</option>
+                        <option value="critical">Crítica</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="id_impact" class="form-label">Impacto</label>
+                    <select class="form-select" id="id_impact" name="impact">
+                        <option value="low">Baixo</option>
+                        <option value="medium" selected>Médio</option>
+                        <option value="high">Alto</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="id_site" class="form-label">Localização / Site</label>
+                    <input type="text" class="form-control" id="id_site" name="site" maxlength="150">
+                </div>
+
+            </div>
+        </div>
+    </div> {% endcomment %}
+
+    <div class="card mt-3">
+        <div class="card-header bg-white fw-semibold">Responsáveis</div>
+        <div class="card-body">
+            <div class="row g-3">
+
+                {% comment %} <div class="col-md-6">
+                    <label for="id_requester" class="form-label">Solicitante</label>
+                    <select class="form-select" id="id_requester" name="requester">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div> {% endcomment %}
+
+                <div class="col-md-6">
+                    <label for="id_cd" class="form-label">Chefe de Departamento (CD)</label>
+                    <select class="form-select" id="id_cd" name="cd">
+                        <option value="">A definir</option>
+                        <option value="">Estefania Marques</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4 mb-3">
+        <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-info">
+            <i class="bi bi-check-lg"></i> Salvar Solicitação
+        </button>
+    </div>
+
+</form>
 
 {% endblock %}
