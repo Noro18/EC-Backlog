@@ -1,3 +1,74 @@
+:root {
+    /* TT Brand Colors */
+    --tt-blue-digital: #005EFF;
+    --tt-blue-timor: #00CFFF;
+    --tt-dark-grey: #141414;
+
+    /* TT Status & Accent Palette (soft, readable, combines well) */
+    --tt-yellow: #FABD0D;
+    --tt-yellow-bg: #FFFBF0;
+    --tt-yellow-text: #4B3904;
+    --tt-yellow-border: #FDE192;
+
+    --tt-green: #00FFB2;
+    --tt-green-bg: #F0FFFA;
+    --tt-green-text: #004C35;
+    --tt-green-border: #8CFFDC;
+
+    --tt-red: #FF0F1F;
+    --tt-red-bg: #FFF1F2;
+    --tt-red-text: #4C0409;
+    --tt-red-border: #FF939A;
+
+    --tt-cyan: #00CFFF;
+    --tt-cyan-bg: #F0FCFF;
+    --tt-cyan-text: #003E4C;
+    --tt-cyan-border: #8CE9FF;
+
+    --tt-blue: #005EFF;
+    --tt-blue-bg: #F0F5FF;
+    --tt-blue-text: #001C4C;
+    --tt-blue-border: #8CB7FF;
+
+    --tt-slate: #303030;
+    --tt-slate-bg: #F3F3F3;
+    --tt-slate-text: #0E0E0E;
+    --tt-slate-border: #A2A2A2;
+
+    /* Bootstrap overrides */
+    --bs-primary: var(--tt-blue-digital);
+    --bs-primary-rgb: 0, 94, 255;
+    --bs-link-color: var(--tt-blue-digital);
+    --bs-link-color-rgb: 0, 94, 255;
+    --bs-link-hover-color: #0043b3;
+    --bs-link-hover-color-rgb: 0, 67, 179;
+    --bs-info: var(--tt-blue-timor);
+    --bs-info-rgb: 0, 207, 255;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--tt-blue-digital);
+    --bs-btn-border-color: var(--tt-blue-digital);
+    --bs-btn-hover-bg: var(--bs-link-hover-color);
+    --bs-btn-hover-border-color: var(--bs-link-hover-color);
+    --bs-btn-active-bg: var(--bs-link-hover-color);
+    --bs-btn-active-border-color: var(--bs-link-hover-color);
+}
+
+.navbar.bg-info {
+    --bs-navbar-color: var(--tt-dark-grey);
+    --bs-navbar-hover-color: var(--tt-dark-grey);
+    --bs-navbar-active-color: var(--tt-dark-grey);
+    --bs-navbar-brand-color: var(--tt-dark-grey);
+    --bs-navbar-brand-hover-color: var(--tt-dark-grey);
+    --bs-navbar-toggler-border-color: transparent;
+    --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23141414' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+.navbar.bg-info .text-white {
+    color: var(--tt-dark-grey) !important;
+}
+
 .nav-section {
     margin: 0.5rem 0 0.5rem 0.5rem;
     font-size: 0.75rem;
@@ -18,4 +89,86 @@
 #sidebarMenu .nav-link:hover {
     background-color: var(--bs-tertiary-bg);
     color: var(--bs-body-color);
+}
+
+#sidebarMenu .nav-link.active,
+#sidebarMenu .nav-link:focus-visible,
+#sidebarMenu .nav-link[aria-current="page"] {
+    background-color: var(--tt-blue-digital);
+    color: #ffffff;
+}
+
+/* Status badges - soft TT palette (kombinasi kuning,hijau,merah,abu) */
+.badge.bg-warning,
+.badge.text-bg-warning {
+    background-color: var(--tt-yellow-bg) !important;
+    color: var(--tt-yellow-text) !important;
+    border: 1px solid var(--tt-yellow-border);
+    font-weight: 600;
+}
+
+.badge.bg-success,
+.badge.text-bg-success {
+    background-color: var(--tt-green-bg) !important;
+    color: var(--tt-green-text) !important;
+    border: 1px solid var(--tt-green-border);
+    font-weight: 600;
+}
+
+.badge.bg-danger,
+.badge.text-bg-danger {
+    background-color: var(--tt-red-bg) !important;
+    color: var(--tt-red-text) !important;
+    border: 1px solid var(--tt-red-border);
+    font-weight: 600;
+}
+
+.badge.bg-secondary,
+.badge.text-bg-secondary {
+    background-color: var(--tt-slate-bg) !important;
+    color: var(--tt-slate-text) !important;
+    border: 1px solid var(--tt-slate-border);
+    font-weight: 600;
+}
+
+.badge.bg-info,
+.badge.text-bg-info {
+    background-color: var(--tt-cyan-bg) !important;
+    color: var(--tt-cyan-text) !important;
+    border: 1px solid var(--tt-cyan-border);
+    font-weight: 600;
+}
+
+/* Timeline (Histórico) - gaya git branch: garis vertikal + titik
+   Markup: <ul class="ec-timeline"> dengan <li> di dalamnya.
+   Garis dibuat dengan border-left pada <ul>, titik dengan ::before
+   pada <li>. Item terakhir tidak diberi garis bawah. */
+.ec-timeline {
+    list-style: none;
+    margin: 0;
+    padding-left: 1.25rem;
+    border-left: 2px solid var(--tt-blue-border);
+}
+
+.ec-timeline > li {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.ec-timeline > li:last-child {
+    margin-bottom: 0;
+}
+
+/* Titik di garis. left -1.25rem + 2px border = titik pas di garis. */
+.ec-timeline > li::before {
+    content: "";
+    position: absolute;
+    left: -1.25rem;
+    top: 0.35rem;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    background-color: var(--tt-blue);
+    /* Cincin putih memotong garis di belakang titik, biar terlihat bersih */
+    box-shadow: 0 0 0 3px var(--bs-body-bg);
 }
