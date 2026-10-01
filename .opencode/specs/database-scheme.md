@@ -1,6 +1,6 @@
 # EC Backlog Management — Database Schema Spec
 
-**Status:** Partially approved on 2026-09-29. Sections 4.1–4.4 (`core.TimeStampedModel`, `accounts.User`, `backlog.Release`, `backlog.EC`) are **approved and implemented**. Sections 4.5–4.6 (`documents`, `workflow`) remain draft: no code until the user replies `SPEC_APPROVED`.
+**Status:** Approved and fully implemented. Sections 4.1–4.4 (`core.TimeStampedModel`, `accounts.User`, `backlog.Release`, `backlog.EC`) were approved on 2026-09-29. Sections 4.5–4.6 (`documents.DocumentVersion`, `workflow.Review`) were approved and implemented on 2026-10-01, with the two naming decisions recorded as #12 and #13 in the decisions log (section 9).
 **Suggested location:** `.opencode/specs/database-schema.md`
 **Sources:** SRD v1.1 (RF01–RF12, RNF01–RNF06), `docs/ARCHITECTURE.md`, and the design decisions made with the user on 2026-09-29 (see section 9).
 
@@ -203,10 +203,10 @@ Table: `workflow_review`. **New table.** One row per CD decision, tied to the ex
 |---|---|---|---|
 | `id` | `BigAutoField` | no | PK |
 | `document_version` | `OneToOneField("documents.DocumentVersion")` | no | `related_name="review"`. UNIQUE by definition (one review per version) |
-| `cd` | FK → `accounts.User` | no | `related_name="reviews"`. The CD who actually decided |
+| `cd` | FK → `accounts.User` | no | `related_name="cd_reviews"`. The CD who actually decided. Role-prefixed to match `requested_ecs` / `assigned_ecs` |
 | `decision` | `CharField(max_length=10, choices=Decision.choices)` | no | `approved` or `rejected` |
 | `comment` | `TextField(blank=True)` | no | The CD's reason. **Required when rejected**. Optional when approved |
-| `decided_at` | `DateTimeField` | no | |
+| `decided_at` | `DateTimeField(auto_now_add=True)` | no | Business date of the decision, separate from `created_at` / `updated_at`. Stamped on first save, like `DocumentVersion.uploaded_at` |
 
 Constraint:
 
@@ -353,6 +353,8 @@ The service re-checks case 2 after every `close_ec` and after every go-live date
 | 9 | Naming | Mixed Portuguese/English, typos (`number_sequenci`, `teks`) | English Django names (mapping in section 4). Typos fixed |
 | 10 | Timestamps | Existing abstract model used `created` / `updated` | Renamed to `created_at` / `updated_at` (section 4.1) via `RenameField`, so no data is lost |
 | 11 | `EC.release` | `NOT NULL` | **Nullable**, so legacy Excel rows without a Release still import (2026-09-29) |
+| 12 | `Review.cd` related_name | `reviews` | **`cd_reviews`**, chosen with the user on 2026-10-01. `user.reviews` read as "reviews *of* this user" rather than "reviews *made by*"; the role prefix matches `requested_ecs` and `assigned_ecs` |
+| 13 | `Review.decision` choices | flat `approved` / `rejected` | Nested `Decision` `models.TextChoices` on the model, matching the `EC.Status` pattern in 4.4, so services compare against `Review.Decision.REJECTED` instead of a bare string |
 
 ---
 
