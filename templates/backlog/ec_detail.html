@@ -1,10 +1,150 @@
 {% extends "base.html" %}
 
-{% block title %}Lista EC{% endblock %}
+{% block title %}Sistema de Gestão de Backlog EC{% endblock %}
 
 {% block content %}
 
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h3 class="mb-1">EC-2026-001</h3>
+        <p class="text-muted mb-0">Criado em 28/09/2026 às 14:32</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge text-bg-warning">In Validation</span>
+        <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+</div>
 
-<h1>ida ne ba detail EC nian yaahh</h1>
+<div class="card">
+    <div class="card-header bg-white fw-semibold">Informação Geral</div>
+    <div class="card-body">
+        <div class="row g-3">
+
+            <div class="col-md-12">
+                <label class="form-label text-muted small mb-1">Título</label>
+                <p class="mb-0 fw-semibold">Upgrade do enlace de transmissão no nó central</p>
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label text-muted small mb-1">Descrição</label>
+                <p class="mb-0">Substituição do equipamento de transmissão para aumentar a largura de banda do enlace principal.</p>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">Release</label>
+                <p class="mb-0"><strong>TT_ON_2026-001</strong></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header bg-white fw-semibold">Responsáveis</div>
+    <div class="card-body">
+        <div class="row g-3">
+
+            <div class="col-md-6">
+                <label class="form-label text-muted small mb-1">Solicitante</label>
+                <p class="mb-0">Ana dos Santos</p>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label text-muted small mb-1">Chefe de Departamento (CD)</label>
+                <p class="mb-0">João Fernandes</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header bg-white fw-semibold">Documentos</div>
+    <div class="card-body">
+        <p class="text-muted mb-0">Ainda sem documentos. Esta área será preenchida pela app <code>documents</code>.</p>
+    </div>
+</div>
+
+
+
+<div class="card mt-3">
+    <div class="card-header bg-white fw-semibold">Histórico</div>
+    <div class="card-body">
+        <ul class="list-unstyled mb-0">
+
+            <li class="d-flex gap-3 pb-3">
+                <i class="bi bi-plus-circle text-success fs-5"></i>
+                <div>
+                    <p class="mb-0 fw-semibold">EC criada</p>
+                    <p class="mb-0 text-muted small">
+                        Ana dos Santos criou a EC
+                        <br>28/09/2026 às 14:32
+                    </p>
+                </div>
+            </li>
+
+            <li class="d-flex gap-3 pb-3">
+                <i class="bi bi-person-plus text-primary fs-5"></i>
+                <div>
+                    <p class="mb-0 fw-semibold">CD atribuído</p>
+                    <p class="mb-0 text-muted small">
+                        Ana dos Santos atribuiu a João Fernandes
+                        <br>28/09/2026 às 15:10
+                    </p>
+                </div>
+            </li>
+
+            <li class="d-flex gap-3 pb-3">
+                <i class="bi bi-x-circle text-danger fs-5"></i>
+                <div>
+                    <p class="mb-0 fw-semibold">Rejeitada</p>
+                    <p class="mb-0 text-muted small">
+                        João Fernandes rejeitou a EC
+                        <br>28/09/2026 às 16:45
+                    </p>
+                    <p class="mb-2 mt-2 p-2 bg-light border rounded small">
+                        Falta o diagrama de rede atualizado.
+                    </p>
+                </div>
+            </li>
+
+            <li class="d-flex gap-3 pb-3">
+                <i class="bi bi-file-earmark-arrow-up text-secondary fs-5"></i>
+                <div>
+                    <p class="mb-0 fw-semibold">Nova versão enviada</p>
+                    <p class="mb-0 text-muted small">
+                        Ana dos Santos enviou a versão v1.1
+                        <br>29/09/2026 às 09:20
+                    </p>
+                </div>
+            </li>
+
+            <li class="d-flex gap-3">
+                <i class="bi bi-hourglass-split text-warning fs-5"></i>
+                <div>
+                    <p class="mb-0 fw-semibold">Em validação</p>
+                    <p class="mb-0 text-muted small">
+                        Aguardando revisão do CD
+                        <br>29/09/2026 às 09:20
+                    </p>
+                </div>
+            </li>
+
+        </ul>
+    </div>
+</div>
+
+
+
+<div class="d-flex justify-content-end gap-2 mt-4 mb-3">
+    <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary">Voltar à Lista</a>
+    <button type="button" class="btn btn-outline-info">
+        <i class="bi bi-x-circle"></i> Cancelar
+    </button>
+    <button type="button" class="btn btn-outline-info">
+        <i class="bi bi-pencil"></i> Editar
+    </button>
+</div>
 
 {% endblock %}
