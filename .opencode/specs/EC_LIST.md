@@ -29,9 +29,9 @@ uv run python manage.py runserver                 # manual check at /ec/
 
 ```
 apps/backlog/
-├── selectors.py        # ec_list_queryset() — select_related/prefetch_related, ordering
 ├── tables.py           # ECTable (django-tables2)
-├── views.py            # EClistView → FilterView or TemplateView with table context
+├── views.py            # EClistView with table context (queryset inline — no selectors.py
+│                       #   until a second caller appears)
 └── tests/
     ├── test_views.py   # new tests
     └── factories.py    # existing ECFactory/ReleaseFactory/UserFactory
@@ -41,14 +41,13 @@ templates/backlog/
 
 ## Code Style
 
-Thin views; queryset logic in `selectors.py`. Line length 100, ruff-formatted.
+Thin views; queryset inline while it is a single simple query. Line length 100, ruff-formatted.
 
 ```python
-# selectors.py
-def ec_list_queryset() -> QuerySet:
-    return EC.objects.select_related(
-        "requester", "responsible_cd", "release"
-    ).order_by("-year", "-number_sequence")
+# views.py — queryset inline (decided with user 2026-10-01: selectors.py deferred)
+context["table"] = ECTable(
+    EC.objects.select_related("requester", "responsible_cd", "release")
+)
 ```
 
 ## Testing Strategy
@@ -63,7 +62,7 @@ pytest-django + factory-boy, tests in `apps/backlog/tests/test_views.py` (TDD: f
 
 ## Boundaries
 
-- **Always:** TDD (red → green → refactor), `uv run pytest` + ruff before done, thin views, business reads in `selectors.py`.
+- **Always:** TDD (red → green → refactor), `uv run pytest` + ruff before done, thin views (queryset inline until a second caller forces extraction into `selectors.py`).
 - **Ask first:** new dependencies, model/migration changes, auth requirements.
 - **Never:** commit db/env files, write filters "while we're here", touch detail/create views.
 
