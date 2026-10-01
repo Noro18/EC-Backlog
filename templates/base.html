@@ -25,20 +25,20 @@
             {% if user.is_authenticated %}
             <p class="nav-section">Lancamento</p>
             <ul class="nav flex-column mb-4">
-                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-kanban"></i> Gestão de Lancamento</a></li>
+                <li class="nav-item"><a href="{% url "backlog:release_list" %}" class="nav-link"><i class="bi bi-kanban"></i> Gestão de Lancamento</a></li>
             </ul>
             {% endif %}
 
-            {% if user.role == 'REQUESTER' %}
+            {% if user.role == 'requester' %}
             <p class="nav-section">Solicitações</p>
             <ul class="nav flex-column mb-4">
                 <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-file-earmark-text"></i> Solicitação</a></li>
-                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-plus-circle"></i> Nova Solicitação</a></li>
-                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-list-check"></i> Minhas Solicitações</a></li>
+                <li class="nav-item"><a href="{% url "backlog:ec_form" %}" class="nav-link"><i class="bi bi-plus-circle"></i> Nova Solicitação</a></li>
+                <li class="nav-item"><a href="{% url "backlog:ec_list" %}" class="nav-link"><i class="bi bi-list-check"></i> Minhas Solicitações</a></li>
             </ul>
             {% endif %}
 
-            {% if user.role == 'CD' or user.role == 'ADMIN' %}
+            {% if user.role == 'cd' or user.role == 'administrator' %}
             <p class="nav-section">Aprovações</p>
             <ul class="nav flex-column mb-4">
                 <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-clock-history"></i> Solicitações Pendentes</a></li>
@@ -49,14 +49,14 @@
             </ul>
             {% endif %}
 
-            {% if user.role == 'DES' %}
+            {% if user.role == 'des_team' %}
             <p class="nav-section">Consulta</p>
             <ul class="nav flex-column mb-4">
                 <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-search"></i> Consultar ECs</a></li>
             </ul>
             {% endif %}
 
-            {% if user.role == 'ADMIN' %}
+            {% if user.role == 'administrator' %}
             <p class="nav-section">Gestão</p>
             <ul class="nav flex-column mb-4">
                 <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-journals"></i> Gestão de ECs</a></li>

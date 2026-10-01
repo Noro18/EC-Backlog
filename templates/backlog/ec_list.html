@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Lista EC{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Lista de ECs</h3>
+    <a href="{% url 'backlog:ec_form' %}" class="btn btn-info">
+        <i class="bi bi-plus-circle"></i> Nova Solicitação
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>EC ID</th>
+                    <th>Referencia</th>
+                    <th>Descrição</th>
+                    <th>Lancamento</th>
+                    <th>Solicitante</th>
+                    <th>CD</th>
+                    <th>Status</th>
+                    <th>Criado em</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>EC-2026-001</td>
+                    <td>CR2026003</td>
+                    <td>Alterações nas Ofertas de Internet GPON </td>
+                    <td>TT_ON_2026-001</td>
+                    <td>Ana</td>
+                    <td>João</td>
+                    <td><span class="badge text-bg-warning">In Validation</span></td>
+                    <td>28/09/2026</td>
+                    <td><a href="{% url 'backlog:ec_detail' %}" class="btn btn-sm btn-outline-info">Ver</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+{% endblock %}
