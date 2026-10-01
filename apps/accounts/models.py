@@ -9,6 +9,8 @@ class User(AbstractUser):
         DES_TEAM = "des_team", "DES Team"
         ADMINISTRATOR = "administrator", "Administrator"
 
+    name = models.CharField(max_length=150, blank=True)
+    email = models.EmailField(unique=True)
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
@@ -19,3 +21,7 @@ class User(AbstractUser):
         db_table = "accounts_user"
         verbose_name = "User"
         verbose_name_plural = "Users"
+
+    @property
+    def full_name(self):
+        return self.name or f"{self.first_name} {self.last_name}".strip()

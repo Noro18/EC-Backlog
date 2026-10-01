@@ -138,10 +138,16 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 
 # django-q2
+#
+# The broker is the default ORM broker, so queued tasks live in the same SQLite
+# file as the rest of the data. SQLite allows one writer at a time, so keep this
+# at 1: email volume is low enough that a second worker only adds contention for
+# the write lock, and a failed task retried 3 times can send a duplicate email.
+# See docs/ARCHITECTURE.md section 2.
 Q_CLUSTER = {
     "name": "ec_backlog",
     "orm": "default",
-    "workers": 2,
+    "workers": 1,
     "timeout": 60,
     "retry": 120,
     "max_attempts": 3,
