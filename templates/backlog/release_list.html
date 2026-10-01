@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Lista EC{% endblock %}
+
+{% block content %}
+
+<h3 class="mb-3">Gestão de Releases</h3>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Release ID</th>
+                    <th>ECs</th>
+                    <th>Capacidade</th>
+                    <th style="width: 220px;">Ocupação</th>
+                    <th>Estado</th>
+                    <th>Criado em</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% comment %} dammy data 1 {% endcomment %}
+                <tr>
+                    <td class="fw-semibold">TT_ON_2026-001</td>
+                    <td>7</td>
+                    <td>10</td>
+                    <td>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-info" style="width: 70%;"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge text-bg-success">Aberto</span>
+                    </td>
+                    <td>20/09/2026</td>
+                </tr>
+
+                {% comment %} dammy data 2 {% endcomment %}
+                <tr>
+                    <td class="fw-semibold">TT_ON_2026-002</td>
+                    <td>10</td>
+                    <td>10</td>
+                    <td>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-danger" style="width: 100%;"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge text-bg-danger">Lotado</span>
+                    </td>
+                    <td>28/09/2026</td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+{% endblock %}
