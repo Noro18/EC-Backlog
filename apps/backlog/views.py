@@ -1,8 +1,16 @@
 
 from django.views.generic import TemplateView
+from django_tables2 import SingleTableView
 
-class EClistView(TemplateView):
+from .models import EC
+from .tables import ECTable
+
+
+class EClistView(SingleTableView):
+    model = EC
+    table_class = ECTable # ida ne mak nia qeury 
     template_name = "backlog/ec_list.html"
+    
 
 
 class ReleaseListView(TemplateView):
