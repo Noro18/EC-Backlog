@@ -25,8 +25,11 @@ editing the go-live date, creating a Release, and any write of any kind.
 5. The annotation is **aliased** (e.g. `ec_total`), never named `ec_count`:
    `Release.ec_count` is a read-only property, and assigning an annotation with that
    name raises `AttributeError: can't set attribute`. This is a real trap, not a style choice.
-6. Visual design is preserved from the existing mock (progress bar, Aberto/Lotado badges,
-   same column set), so this is a data-wiring change, not a redesign.
+6. Visual design follows the existing mock (badges, same column set), so this is a
+   data-wiring change, not a redesign. **Deviation, 2026-10-02:** the mock's occupancy
+   **progress bar is dropped**, and occupancy appears as a plain `2 / 10` ratio **inside
+   the ECs column** — agreed with the user. The bar adds CSS and markup for information a
+   number already conveys.
 7. Dates render with explicit numeric formats (`d/m/Y`, `d/m/Y H:i`) — `LANGUAGE_CODE`
    is `en-us`, so there are no localized month names to rely on.
 8. UI strings stay Portuguese, matching every other page.
@@ -40,7 +43,8 @@ in place. `django-filter` is installed but unused in this feature.
 
 ```bash
 uv run pytest apps/backlog/tests/test_views.py   # release list tests
-uv run pytest                                     # full suite (44 tests must stay green)
+uv run pytest apps/backlog/tests/test_selectors.py  # selector tests (no HTTP)
+uv run pytest                                     # full suite — everything already green must stay green
 uv run ruff check . && uv run ruff format .       # lint
 uv run python manage.py runserver                 # manual check at /backlog/release/
 ```
@@ -49,18 +53,20 @@ uv run python manage.py runserver                 # manual check at /backlog/rel
 
 ```
 apps/backlog/
-├── selectors.py         # new file: release_list_queryset() — annotated, ordered base query
+├── selectors.py         # new file: release_with_ec_count() — annotated, ordered base query
 ├── tables.py           # ReleaseTable (new class, alongside ECTable)
 ├── views.py            # ReleaseListView -> SingleTableView (delegates to the selector)
 └── tests/
     ├── test_views.py   # new file; release list tests only (the EC list/detail view
     │                   #   tests referenced by the earlier specs are not in git)
+    ├── test_selectors.py  # new file; tests for selectors.py, no HTTP involved
     └── factories.py    # existing ReleaseFactory
 templates/backlog/
 └── release_list.html   # replace the two dummy rows with {% render_table table %}
-static/css/
-└── app.css             # add the progress-bar height rule; no inline style in the table
 ```
+
+No `static/` change: the occupancy bar was dropped (assumption 6), so there is no CSS to
+move out of the table template.
 
 `selectors.py` **is** used here: the annotated queryset gets a name and one owner.
 `services.py` is **not** — this page performs no writes, so there is no business rule to
@@ -71,7 +77,7 @@ protect. See "Layering decision" below.
 ARCHITECTURE §6 puts business logic in `services.py` (writes) / `selectors.py` (complex
 reads) and out of views. Applied to this feature:
 
-- **`selectors.py` — used.** `release_list_queryset()` owns the annotated, ordered base
+- **`selectors.py` — used.** `release_with_ec_count()` owns the annotated, ordered base
   query for Releases. It is named because it is a real query concept (join + count + order,
   the exact thing that must not be re-derived per page) and because the second caller is
   already known: RF12 filters and the deferred release detail page will both need it.
@@ -89,10 +95,10 @@ reads) and out of views. Applied to this feature:
 
 | Column | Source | Notes |
 |---|---|---|
-| ECs | `ec_total` (annotated) | falls back to 0 for an empty Release |
-| Ocupação | progress bar | width = `min(100, round(ec_total / capacity * 100))`; `bg-info` under 100%, `bg-danger` at 100% |
+| ECs | `ec_total` + `capacity` | ratio text, `2 / 10`, in the ECs column itself — no progress bar (assumption 6) |
 | Estado | derived | `is_open` → "Aberto" `text-bg-success`; else if `ec_total >= capacity` → "Lotado" `text-bg-danger`; else → "Concluído" `text-bg-secondary` |
 | Go-live | `production_go_live_date` | `d/m/Y`, or `—` when `None` |
+| Criado em | `created_at` | `d/m/Y H:i` |
 
 The three-state badge is safe to derive: `is_open` becomes `False` through exactly two paths
 (`database-scheme.md` §7.3) — full, or finished (every non-cancelled EC Closed **and** the
@@ -100,35 +106,40 @@ go-live date set). So "not open and not full" can only mean finished.
 
 ## Code Style
 
-Thin view: it delegates the query to `release_list_queryset()` and passes the result to
+Thin view: it delegates the query to `release_with_ec_count()` and passes the result to
 `ReleaseTable`. Table class sits next to `ECTable` and follows its column conventions
 (`attrs={"td": {...}}` for alignment, `verbose_name` in Portuguese, `template_code` for
 anything with markup). Line length 100, ruff-formatted.
 
 ## Testing Strategy
 
-pytest-django + factory-boy, tests in `apps/backlog/tests/test_views.py`, written **before**
-the view/table code (`.opencode/skills/django-tdd-loop/SKILL.md`).
+pytest-django + factory-boy, tests in `apps/backlog/tests/test_views.py` (selector tests in
+`test_selectors.py`), written **before** the view/table code
+(`.opencode/skills/django-tdd-loop/SKILL.md`).
 
 1. `GET /backlog/release/` returns 200.
 2. Response contains a real Release created by `ReleaseFactory` (its code appears in the body).
 3. `table` is present in the context.
-4. EC count and state are derived from the database, not hardcoded: a Release with 2 of 10 ECs
-   renders the occupancy of 2; a full one renders "Lotado".
+4. EC count, occupancy and state are derived from the database, not hardcoded: a Release with
+   2 of 10 ECs renders `2 / 10`; a full one renders "Lotado"; a finished one renders
+   "Concluído".
 5. Default ordering is newest first (`-year`, `-number_sequence`).
 6. Sorting works (e.g. `?sort=release_code`), via the sortable header.
 7. Pagination: 25 per page; 30 Releases → `?page=2` reachable.
 8. No N+1: constant query count with `django.test.AssertNumQueries` while the row count grows.
-   This is the test that fails if the annotation is dropped for the `ec_count` property, or
-   if the view stops using `release_list_queryset()` and queries the model directly.
+   This is the test that fails if a column calls `record.is_full` (which runs
+   `self.ecs.count()` per row), or if the view stops using `release_with_ec_count()` and
+   queries the model directly.
 9. Empty database → the table's empty text, not a crash.
-10. `release_list_queryset()` is directly testable without HTTP (called as a function,
+10. `release_with_ec_count()` is directly testable without HTTP (called as a function,
     asserting on the returned queryset), which is the point of putting it in `selectors.py`.
+    Its tests live in `test_selectors.py` and must prove the rows are `Release` objects,
+    not dicts — that is the regression test for the `.values()` mistake.
 
 ## Boundaries
 
 - **Always:** TDD (red → green → refactor), `uv run pytest` + ruff before done, thin views,
-  `select_related`/`annotate` on list pages, the query owned by `release_list_queryset()`.
+  `select_related`/`annotate` on list pages, the query owned by `release_with_ec_count()`.
 - **Ask first:** new dependencies, model/migration changes, filters, auth/permissions,
   touching `ECListView`, the EC detail/form views, or the `workflow`/`documents` apps.
 - **Never:** change `Release.is_open` or `capacity` here (they belong to `backlog/services.py`,
@@ -139,12 +150,22 @@ the view/table code (`.opencode/skills/django-tdd-loop/SKILL.md`).
 ## Success Criteria
 
 - `/backlog/release/` shows real DB rows with sortable headers and working pagination.
-- EC counts, occupancy bars and state badges are computed from the database.
-- The view holds no query logic; `release_list_queryset()` is the single owner of the
+- EC counts, occupancy ratios and state badges are computed from the database.
+- The view holds no query logic; `release_with_ec_count()` is the single owner of the
   annotated base query and is testable without HTTP.
-- No hardcoded values remain in `release_list.html`; no inline `style` on the progress bar.
-- The new tests pass, the 44 existing tests stay green, ruff is clean.
+- No hardcoded values remain in `release_list.html`; no inline `style` in the table
+  `template_code`.
+- The new tests pass, the existing suite stays green, ruff is clean.
 - No model change, no migration, no filters, no action column, no permission logic.
+
+## Decisions log
+
+| Date | Decision |
+|---|---|
+| 2026-10-02 | Spec approved (`SPEC_APPROVED`) as written, before any code. |
+| 2026-10-02 | `selectors.py` used; `services.py` deliberately absent (see "Layering decision"). |
+| 2026-10-02 | Occupancy **progress bar dropped**; occupancy appears as `2 / 10` **inside the ECs column** (`ec_total` becomes a `TemplateColumn`). No `static/css` change needed. |
+| 2026-10-02 | Selector tests live in `test_selectors.py`, not `test_views.py` — a selector is not a view. |
 
 ## Deferred (next slices, each needs its own spec)
 
@@ -156,7 +177,7 @@ the view/table code (`.opencode/skills/django-tdd-loop/SKILL.md`).
 2. Go-live date entry (`record_go_live_date`) — belongs to `workflow`, DES role only (§7.6);
    blocked on `accounts`/RNF01 permissions.
 3. Release detail page (the ECs of one Release) — becomes the second caller of
-   `release_list_queryset()`, which is when its extraction stops being speculative.
+   `release_with_ec_count()`, which is when its extraction stops being speculative.
 4. Filters on the list (year, open/full/closed) and `ec_backlog_base()` for RF12.
 
 ## Open Questions

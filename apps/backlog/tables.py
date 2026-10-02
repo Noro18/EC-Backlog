@@ -21,8 +21,11 @@ class ReleaseTable(tables.Table):
     )
     year = tables.Column(attrs={"td": {"class": "text-nowrap"}})
     number_sequence = tables.Column(verbose_name="Seq.", attrs={"td": {"class": "text-nowrap"}})
-    capacity = tables.Column(attrs={"td": {"class": "text-nowrap"}})
-    ec_total = tables.Column(verbose_name="ECs", attrs={"td": {"class": "text-nowrap"}})
+    ec_total = tables.TemplateColumn(
+        verbose_name="ECs", 
+        attrs={"td": {"class": "text-nowrap"}},
+        template_code="{{ record.ec_total }} / {{record.capacity}}"
+        )
     is_full = tables.TemplateColumn(
         verbose_name="Status",
         orderable=False,
@@ -54,7 +57,6 @@ class ReleaseTable(tables.Table):
             "release_code",
             "year",
             "number_sequence",
-            "capacity",
             "ec_total",
             "is_full",
             "action",
