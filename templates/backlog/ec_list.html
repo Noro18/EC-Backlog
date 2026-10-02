@@ -5,12 +5,98 @@
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">Lista de ECs</h3>
-    <a href="{% url 'backlog:ec_form' %}" class="btn btn-info">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Gestão de ECs</h3>
+        <p class="text-muted mb-0">Lista de todas as Engineering Changes registadas no sistema.</p>
+    </div>
+    <a href="{% url 'backlog:ec_form' %}" class="btn btn-info fw-semibold">
         <i class="bi bi-plus-circle"></i> Nova Solicitação
     </a>
 </div>
+
+<div class="row row-cols-1 row-cols-md-3 row-cols-xl-5 g-3 mb-4">
+    
+    <!-- Card 1: Total -->
+    <div class="col">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-semibold text-uppercase">Total</div>
+                <div class="fs-4 fw-bold text-dark mt-1">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Em Validação -->
+    <div class="col">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-semibold text-uppercase">Em Validação</div>
+                <div class="fs-4 fw-bold text-warning mt-1">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Aprovadas -->
+    <div class="col">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-semibold text-uppercase">Aprovadas</div>
+                <div class="fs-4 fw-bold text-success mt-1">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Rejeitadas -->
+    <div class="col">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-semibold text-uppercase">Rejeitadas</div>
+                <div class="fs-4 fw-bold text-danger mt-1">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 5: Fechadas -->
+    <div class="col">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small fw-semibold text-uppercase">Fechadas</div>
+                <div class="fs-4 fw-bold text-secondary mt-1">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Toolbar Filter / Search -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Pesquisar por referência ou descrição..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">Todos os status</option>
+                    <option value="in_validation" {% if request.GET.status == "in_validation" %}selected{% endif %}>Em Validação</option>
+                    <option value="approved" {% if request.GET.status == "approved" %}selected{% endif %}>Aprovada</option>
+                    <option value="rejected" {% if request.GET.status == "rejected" %}selected{% endif %}>Rejeitada</option>
+                    <option value="closed" {% if request.GET.status == "sent_to_des" %}selected{% endif %}>Fechada</option>
+                </select>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button type="submit" class="btn btn-sm btn-outline-primary px-3">Filtrar</button>
+                <a href="{% url 'backlog:ec_list' %}" class="btn btn-sm btn-link text-muted">Limpar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
 
 <div class="card">
     <div class="card-body">
