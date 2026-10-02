@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django.utils.html import format_html
 
-from .models import EC
+from .models import EC, Release
 
 STATUS_BADGE_CLASSES = {
     "in_validation": "text-bg-warning",
@@ -12,6 +12,57 @@ STATUS_BADGE_CLASSES = {
     "cancelled": "text-bg-dark",
 }
 
+
+class ReleaseTable(tables.Table):
+    release_code = tables.TemplateColumn(
+        verbose_name="Release",
+        orderable=False,
+        template_code="""<span class="fw-semibold">{{ record.release_code }}</span>""",
+    )
+    year = tables.Column(attrs={"td": {"class": "text-nowrap"}})
+    number_sequence = tables.Column(verbose_name="Seq.", attrs={"td": {"class": "text-nowrap"}})
+    capacity = tables.Column(attrs={"td": {"class": "text-nowrap"}})
+    ec_total = tables.Column(verbose_name="ECs", attrs={"td": {"class": "text-nowrap"}})
+    is_full = tables.TemplateColumn(
+        verbose_name="Status",
+        orderable=False,
+        empty_values=(),
+        template_code="""
+            {% if record.is_full %}
+                <span class="badge text-bg-danger">Cheia</span>
+            {% else %}
+                <span class="badge text-bg-success">Aberta</span>
+            {% endif %}
+        """,
+    )
+    action = tables.TemplateColumn(
+        verbose_name="Ações",
+        orderable=False,
+        empty_values=(),
+        template_code="""
+            <a href="#"
+                class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-eye"></i> Ver
+            </a>
+        """,
+    )
+
+    class Meta:
+        model = Release
+        template_name = "django_tables2/bootstrap5.html"
+        fields = (
+            "release_code",
+            "year",
+            "number_sequence",
+            "capacity",
+            "ec_total",
+            "is_full",
+            "action",
+        )
+        attrs = {"class": "table table-sm table-hover align-middle mb-0"}
+        empty_text = "Nenhuma Release encontrada."
+        per_page = 25
+        order_by = ("-year", "-number_sequence")
 
 class ECTable(tables.Table):
     ec_code = tables.TemplateColumn(
@@ -34,6 +85,7 @@ class ECTable(tables.Table):
         verbose_name="Criado em",
         attrs={"td": {"class": "text-nowrap font-monospace text-body-secondary"}},
     )
+    ec_total = tables.Column(verbose_name="ECs", attrs={"td": {"class": "text-nowrap"}})
     status = tables.Column(verbose_name="Status", attrs={"th": {"class": "text-center"}})
     is_imported = tables.TemplateColumn(
         verbose_name="Origem",
