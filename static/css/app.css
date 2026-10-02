@@ -188,46 +188,44 @@ table.table td .fw-semibold {
     z-index: 1;
 }
 
-/* 1. Latar belakang sidebar */
+
 #sidebarMenu {
     background-color: #f4f8ff !important;
     border-right-color: #dbeafe !important;
 }
 
-/* 2. Teks section / judul kategori di sidebar */
+
 #sidebarMenu .nav-section {
-    color: #01cfff !important; /* Cyan sebagai aksen kecil pada judul */
+    color: #01cfff !important; 
     font-weight: 700;
     letter-spacing: 0.5px;
 }
 
-/* 3. Teks menu biasa */
+
 #sidebarMenu .nav-link {
-    color: #0b2a6b !important; /* Biru tua, nyaman dibaca */
+    color: #0b2a6b !important; 
     font-weight: 500;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* 4. Warna saat kursor diarahkan ke menu (Hover) */
 #sidebarMenu .nav-link:hover {
-    background-color: #e3eeff !important; /* Biru sangat muda */
+    background-color: #e3eeff !important; 
     color: #0b2a6b !important;
 }
 
-/* 5. Menu yang sedang aktif */
+
 #sidebarMenu .nav-link.active,
 #sidebarMenu .nav-link:focus-visible,
 #sidebarMenu .nav-link[aria-current="page"] {
-    background-color: #005cfa !important; /* Biru utama dari banner */
-    color: #ffffff !important;           /* Teks putih */
+    background-color: #005cfa !important; 
+    color: #ffffff !important;           
 }
 
-/* 6. Aksen kecil (ikon atau garis tipis di dalam menu aktif/hover) */
 #sidebarMenu .nav-link i {
-    color: #01cfff; /* Cyan untuk ikon menu */
+    color: #01cfff;
 }
 
 #sidebarMenu .nav-link.active i {
-    color: #ffffff; /* Ikon jadi putih saat menu aktif */
+    color: #ffffff;
 }
 
