@@ -117,24 +117,28 @@ pytest-django + factory-boy, tests in `apps/backlog/tests/test_views.py` (select
 `test_selectors.py`), written **before** the view/table code
 (`.opencode/skills/django-tdd-loop/SKILL.md`).
 
-1. `GET /backlog/release/` returns 200.
-2. Response contains a real Release created by `ReleaseFactory` (its code appears in the body).
-3. `table` is present in the context.
-4. EC count, occupancy and state are derived from the database, not hardcoded: a Release with
-   2 of 10 ECs renders `2 / 10`; a full one renders "Lotado"; a finished one renders
+Status key: ✅ written and passing (52 green) · ⏳ pending, deferred to a later pass.
+
+1. ✅ `GET /backlog/release/` returns 200.
+2. ✅ Response contains a real Release created by `ReleaseFactory` (its code appears in the body).
+3. ✅ `table` is present in the context.
+4. ✅ EC count, occupancy and state are derived from the database, not hardcoded: a Release with
+   2 of 5 ECs renders `2 / 5` (`capacity=5`, so a hardcoded 10 would fail); a full open one
+   renders "Lotado"; an open non-full one renders "Aberta"; a finished one renders
    "Concluído".
-5. Default ordering is newest first (`-year`, `-number_sequence`).
-6. Sorting works (e.g. `?sort=release_code`), via the sortable header.
-7. Pagination: 25 per page; 30 Releases → `?page=2` reachable.
-8. No N+1: constant query count with `django.test.AssertNumQueries` while the row count grows.
-   This is the test that fails if a column calls `record.is_full` (which runs
-   `self.ecs.count()` per row), or if the view stops using `release_with_ec_count()` and
-   queries the model directly.
-9. Empty database → the table's empty text, not a crash.
-10. `release_with_ec_count()` is directly testable without HTTP (called as a function,
+5. ⏳ Default ordering is newest first (`-year`, `-number_sequence`).
+6. ⏳ Sorting works (e.g. `?sort=release_code`), via the sortable header.
+7. ⏳ Pagination: 25 per page; 30 Releases → `?page=2` reachable.
+8. ✅ No N+1: constant query count while the row count grows — `test_query_count_does_not_grow_with_rows`,
+   implemented with `CaptureQueriesContext` (caught `ec_count` → `12 == 5`, i.e. 1 query
+   per row; green after the badge switched to the `ec_total` annotation).
+9. ⏳ Empty database → the table's empty text, not a crash.
+10. ⏳ `release_with_ec_count()` is directly testable without HTTP (called as a function,
     asserting on the returned queryset), which is the point of putting it in `selectors.py`.
     Its tests live in `test_selectors.py` and must prove the rows are `Release` objects,
     not dicts — that is the regression test for the `.values()` mistake.
+11. ✅ Closed **and** full release → "Lotado" (`test_closed_and_full_renders_lotado`) — the
+    branch-order decision: fullness wins over `is_open`.
 
 ## Boundaries
 
@@ -158,6 +162,21 @@ pytest-django + factory-boy, tests in `apps/backlog/tests/test_views.py` (select
 - The new tests pass, the existing suite stays green, ruff is clean.
 - No model change, no migration, no filters, no action column, no permission logic.
 
+## Outstanding work (pending)
+
+Code items still required to call Slice 1 done — all ⏳, none blocking the app from running:
+
+1. ⏳ Remove the `action` column from `ReleaseTable` (declaration + `Meta.fields`) — violates
+   "no action column" and renders a dead `href="#"`.
+2. ⏳ Add `production_go_live_date` (`d/m/Y`, `—` when `None`) and `created_at`
+   (`d/m/Y H:i`) columns.
+3. ⏳ Badge palette vs this spec: code renders Aberta/`text-bg-warning` and
+   Concluído/`text-bg-success`; this doc said Aberto/`success`, Concluído/`secondary`.
+   Either change the classes or log the deviation in the Decisions log below.
+4. ⏳ `uv run ruff check . --fix && uv run ruff format .` — `I001` in `apps/backlog/views.py`
+   is the last error; then full `uv run pytest`.
+5. ✅ Commit the working slice — this PR.
+
 ## Decisions log
 
 | Date | Decision |
@@ -166,6 +185,8 @@ pytest-django + factory-boy, tests in `apps/backlog/tests/test_views.py` (select
 | 2026-10-02 | `selectors.py` used; `services.py` deliberately absent (see "Layering decision"). |
 | 2026-10-02 | Occupancy **progress bar dropped**; occupancy appears as `2 / 10` **inside the ECs column** (`ec_total` becomes a `TemplateColumn`). No `static/css` change needed. |
 | 2026-10-02 | Selector tests live in `test_selectors.py`, not `test_views.py` — a selector is not a view. |
+| 2026-10-02 | Badge precedence: **fullness wins over `is_open`** — a closed+full release renders "Lotado", not "Concluído". Locked by `test_closed_and_full_renders_lotado`. |
+| 2026-10-02 | Status column reads the **annotation** `record.ec_total`, never the `ec_count` property — the property costs 1 query per row (N+1, caught as `12 == 5`). |
 
 ## Deferred (next slices, each needs its own spec)
 

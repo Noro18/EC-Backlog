@@ -22,19 +22,21 @@ class ReleaseTable(tables.Table):
     year = tables.Column(attrs={"td": {"class": "text-nowrap"}})
     number_sequence = tables.Column(verbose_name="Seq.", attrs={"td": {"class": "text-nowrap"}})
     ec_total = tables.TemplateColumn(
-        verbose_name="ECs", 
+        verbose_name="ECs",
         attrs={"td": {"class": "text-nowrap"}},
-        template_code="{{ record.ec_total }} / {{record.capacity}}"
-        )
-    is_full = tables.TemplateColumn(
+        template_code="{{ record.ec_total }} / {{record.capacity}}",
+    )
+    status = tables.TemplateColumn(
         verbose_name="Status",
         orderable=False,
         empty_values=(),
         template_code="""
-            {% if record.is_full %}
-                <span class="badge text-bg-danger">Cheia</span>
+            {% if record.ec_total >= record.capacity %}
+                <span class="badge text-bg-danger">Lotado</span>
+            {% elif record.is_open %}
+                <span class="badge text-bg-warning">Aberta</span>
             {% else %}
-                <span class="badge text-bg-success">Aberta</span>
+                <span class="badge text-bg-success">Concluído</span>
             {% endif %}
         """,
     )
@@ -58,13 +60,14 @@ class ReleaseTable(tables.Table):
             "year",
             "number_sequence",
             "ec_total",
-            "is_full",
+            "status",
             "action",
         )
         attrs = {"class": "table table-sm table-hover align-middle mb-0"}
         empty_text = "Nenhuma Release encontrada."
         per_page = 25
         order_by = ("-year", "-number_sequence")
+
 
 class ECTable(tables.Table):
     ec_code = tables.TemplateColumn(
