@@ -1,0 +1,58 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar - Sistema de Gestão de Backlog EC</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class=" d-flex align-items-center justify-content-center vh-100 bg-primary">
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-4">
+                            <img src="{% static 'images/icontt.svg' %}" alt="Timor Telecom" style="max-height: 48px; width: auto;" class="img-fluid">
+                            <p class="text-muted small mb-0">Sistema de Gestão de Backlog EC</p>
+                        </div>
+
+                        {% if form.errors %}
+                            <div class="alert alert-danger py-2 small text-center" role="alert">
+                                Utilizador ou palavra-passe inválidos.
+                            </div>
+                        {% endif %}
+
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.username.id_for_label }}" class="form-label small fw-semibold">Utilizador</label>
+                                <input type="text" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}" 
+                                       class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                                       value="{{ form.username.value|default:'' }}" required autofocus>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.password.id_for_label }}" class="form-label small fw-semibold">Palavra-passe</label>
+                                <input type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}" 
+                                       class="form-control {% if form.password.errors %}is-invalid{% endif %}" required>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="py-2 btn btn-info fw-semibold text-white">Entrar na aplicação</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+</body>
+</html>
