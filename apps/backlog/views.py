@@ -1,9 +1,9 @@
 
 from django.views.generic import TemplateView
 from django_tables2 import SingleTableView
-from .models import EC
-from .tables import ECTable
-
+from .models import EC, Release
+from .tables import ECTable, ReleaseTable
+from .selectors import release_with_ec_count
 class ECListView(SingleTableView):
     model = EC
     table_class = ECTable # ida ne mak nia qeury 
@@ -11,8 +11,15 @@ class ECListView(SingleTableView):
     
 
 
-class ReleaseListView(TemplateView):
+class ReleaseListView(SingleTableView):
+    model = Release
+    table_class = ReleaseTable
     template_name = "backlog/release_list.html"
+
+    def get_queryset(self): # this is reserved function 
+        return release_with_ec_count()
+
+    
 
 class NewECView(TemplateView):
     template_name = "backlog/ec_form.html"
