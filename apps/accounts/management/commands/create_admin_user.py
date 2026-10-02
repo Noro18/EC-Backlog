@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 
 class Command(BaseCommand):
@@ -17,34 +17,44 @@ class Command(BaseCommand):
             help="Unique email. Defaults to <username>@localhost if omitted.",
         )
 
-    @transaction.atomic
     def handle(self, *args, **options):
-        user_model = get_user_model()
-        username = options["username"].strip()
-
+        User = get_user_model()
+        username = User.normalize_username(options["username"].strip())
         if not username:
             raise CommandError("Username cannot be empty.")
 
-        if user_model.objects.filter(username=username).exists():
-            raise CommandError(f'Username "{username}" is already taken.')
+        email = (options["email"].strip() or f"{username}@localhost").lower()
 
-        email = options["email"].strip() or f"{username}@localhost"
-        if user_model.objects.filter(email=email).exists():
+        if User.objects.filter(username__iexact=username).exists():
+            raise CommandError(f'Username "{username}" is already taken.')
+        if User.objects.filter(email__iexact=email).exists():
             raise CommandError(f'Email "{email}" is already taken.')
 
         password = self._prompt_password()
+
+        candidate = User(
+            username=username,
+            email=email,
+            name=options["name"].strip(),
+            role=User.Role.ADMINISTRATOR,
+        )
         try:
-            validate_password(password, user_model(username=username, email=email))
+            candidate.full_clean(exclude=["password"])  # validasi format/panjang
+            validate_password(password, candidate)
         except ValidationError as exc:
             raise CommandError("\n".join(exc.messages)) from exc
 
-        user_model.objects.create_superuser(
-            username=username,
-            email=email,
-            password=password,
-            name=options["name"].strip(),
-            role=user_model.Role.ADMINISTRATOR,
-        )
+        try:
+            with transaction.atomic():  # transaksi hanya saat menulis ke DB
+                User.objects.create_superuser(
+                    username=username,
+                    email=email,
+                    password=password,
+                    name=candidate.name,
+                    role=candidate.role,
+                )
+        except IntegrityError as exc:
+            raise CommandError("Username or email was just taken.") from exc
 
         self.stdout.write(
             self.style.SUCCESS(f'Administrator "{username}" created with role=administrator.')
