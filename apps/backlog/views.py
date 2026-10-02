@@ -1,9 +1,12 @@
 
 from django.views.generic import TemplateView
 from django_tables2 import SingleTableView
+
 from .models import EC, Release
-from .tables import ECTable, ReleaseTable
 from .selectors import release_with_ec_count
+from .tables import ECTable, ReleaseTable
+
+
 class ECListView(SingleTableView):
     model = EC
     table_class = ECTable # ida ne mak nia qeury 
