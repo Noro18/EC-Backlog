@@ -97,13 +97,14 @@ class TestUserList:
         assert "maria.costax@example.com" in html
         assert "joao.soares@example.com" not in html
 
-    def test_edit_column_links_to_the_admin_change_form(self, client):
+    def test_edit_column_links_to_the_app_update_form(self, client):
         client.force_login(UserFactory(role="administrator"))
         target = UserFactory(username="para.editar")
 
         html = client.get(reverse("accounts:user_list")).content.decode()
 
-        assert f'/admin/accounts/user/{target.pk}/change/' in html
+        assert reverse("accounts:user_update", args=[target.pk]) in html
+        assert f"/admin/accounts/user/{target.pk}/change/" not in html
         assert "Editar" in html
 
     def test_non_administrator_gets_403(self, client):
@@ -192,3 +193,96 @@ class TestUserCreateView:
 
         assert reverse("accounts:user_create") in html
         assert "/admin/accounts/user/add/" not in html
+
+
+class TestUserUpdate:
+    def test_administrator_gets_200_on_edit_form(self, client):
+        admin = UserFactory(role="administrator")
+        target = UserFactory(name="Antigo Nome")
+        client.force_login(admin)
+
+        response = client.get(reverse("accounts:user_update", args=[target.pk]))
+
+        assert response.status_code == 200
+        assert "Antigo Nome" in response.content.decode()
+
+    def test_non_administrator_gets_403_on_edit(self, client):
+        target = UserFactory()
+        client.force_login(UserFactory(role="requester"))
+
+        response = client.get(reverse("accounts:user_update", args=[target.pk]))
+
+        assert response.status_code == 403
+
+    def test_administrator_updates_user_successfully(self, client):
+        admin = UserFactory(role="administrator")
+        target = UserFactory(name="Antigo Nome", email="antigo@example.com")
+        client.force_login(admin)
+
+        response = client.post(
+            reverse("accounts:user_update", args=[target.pk]),
+            {
+                "username": target.username,
+                "name": "Novo Nome",
+                "email": "novo@example.com",
+                "role": "cd",
+                "is_active": "on",
+            },
+        )
+
+        assert response.status_code == 302
+        target.refresh_from_db()
+        assert target.name == "Novo Nome"
+        assert target.email == "novo@example.com"
+        assert target.role == "cd"
+
+    def test_username_cannot_be_changed(self, client):
+        admin = UserFactory(role="administrator")
+        target = UserFactory(username="original")
+        client.force_login(admin)
+
+        client.post(
+            reverse("accounts:user_update", args=[target.pk]),
+            {
+                "username": "tentativamudanca",
+                "name": "Nome",
+                "email": target.email,
+                "role": target.role,
+                "is_active": "on",
+            },
+        )
+
+        target.refresh_from_db()
+        assert target.username == "original"
+
+
+class TestUserDeactivate:
+    def test_administrator_deactivates_user(self, client):
+        admin = UserFactory(role="administrator")
+        target = UserFactory(is_active=True)
+        client.force_login(admin)
+
+        response = client.post(reverse("accounts:user_deactivate", args=[target.pk]))
+
+        assert response.status_code == 302
+        target.refresh_from_db()
+        assert target.is_active is False
+
+    def test_admin_cannot_deactivate_themselves(self, client):
+        admin = UserFactory(role="administrator")
+        client.force_login(admin)
+
+        client.post(reverse("accounts:user_deactivate", args=[admin.pk]))
+
+        admin.refresh_from_db()
+        assert admin.is_active is True
+
+    def test_non_administrator_cannot_deactivate(self, client):
+        target = UserFactory(is_active=True)
+        client.force_login(UserFactory(role="requester"))
+
+        response = client.post(reverse("accounts:user_deactivate", args=[target.pk]))
+
+        assert response.status_code == 403
+        target.refresh_from_db()
+        assert target.is_active is True
