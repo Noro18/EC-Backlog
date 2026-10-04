@@ -45,7 +45,7 @@ class ReleaseTable(tables.Table):
         orderable=False,
         empty_values=(),
         template_code="""
-            <a href="#"
+            <a href="{% url 'backlog:release_detail' record.id %}"
                 class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-eye"></i> Ver
             </a>
@@ -90,7 +90,7 @@ class ECTable(tables.Table):
         verbose_name="Criado em",
         attrs={"td": {"class": "text-nowrap font-monospace text-body-secondary"}},
     )
-    ec_total = tables.Column(verbose_name="ECs", attrs={"td": {"class": "text-nowrap"}})
+    
     status = tables.Column(verbose_name="Status", attrs={"th": {"class": "text-center"}})
     is_imported = tables.TemplateColumn(
         verbose_name="Origem",
