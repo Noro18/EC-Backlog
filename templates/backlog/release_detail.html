@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Release-{{ release.release_code }} — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Release {{ release.release_code }}</h1>
+        <p>Year: {{ release.year }}</p>
+        <p>Number Sequence: {{ release.number_sequence }}</p>
+        <p>Capacity: {{ release.capacity }}</p>
+        <p>Ocupancy: {{ release.ec_total }} / {{ release.capacity }}</p>
+        <p>Status: <span class="badge {{ status_badge_class }}">{{ release.status_label }}</span></p>
+        <h2>ECs in this Release</h2>
+        <ul>
+            {% for ec in release.ecs.all %}
+                <li><a href="{% url 'backlog:ec_detail' ec.id %}">EC-{{ ec.ec_code }}</a></li>
+            {% empty %}
+                <li>No ECs in this release.</li>
+            {% endfor %}
+        </ul>   
+    </div>
+{% endblock %}

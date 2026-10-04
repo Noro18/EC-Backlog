@@ -78,3 +78,36 @@ class TestReleaseList:
         html = client.get(reverse("backlog:release_list")).content.decode()
 
         assert "Lotado" in html
+
+
+class TestReleaseDetail:
+    def test_returns_200_and_release_in_context(self, client):
+        release = ReleaseFactory(year=2027, number_sequence=42)
+        response = client.get(reverse("backlog:release_detail", args=[release.pk]))
+
+        assert response.status_code == 200
+        assert response.context["release"] == release
+
+    def test_unknown_pk_returns_404(self, client):
+        ReleaseFactory()
+        response = client.get(reverse("backlog:release_detail", args=[99999]))
+
+        assert response.status_code == 404
+
+    def test_ocupancy(self, client):
+        release = ReleaseFactory(capacity=3)
+        ECFactory(release=release)
+        ECFactory(release=release)
+        response = client.get(reverse("backlog:release_detail", args=[release.pk]))
+        html = response.content.decode()
+
+        assert "2 / 3" in html
+
+    def test_status_display(self, client):
+        release = ReleaseFactory(capacity=2, is_open=False)
+        ECFactory(release=release)
+        ECFactory(release=release)
+        response = client.get(reverse("backlog:release_detail", args=[release.pk]))
+        html = response.content.decode()
+
+        assert "Lotado" in html

@@ -12,12 +12,18 @@ STATUS_BADGE_CLASSES = {
     "cancelled": "text-bg-dark",
 }
 
+RELEASE_BADGE_CLASSES = {
+    "Lotado": "text-bg-danger",
+    "Aberta": "text-bg-warning",
+    "Concluído": "text-bg-success",
+}
+
 
 class ReleaseTable(tables.Table):
     release_code = tables.TemplateColumn(
         verbose_name="Release",
         orderable=False,
-        template_code="""<span class="fw-semibold">{{ record.release_code }}</span>""",
+        template_code="""<a href="{% url 'backlog:release_detail' record.id %}" class="fw-semibold text-decoration-none">{{ record.release_code }}</a>""",
     )
     year = tables.Column(attrs={"td": {"class": "text-nowrap"}})
     number_sequence = tables.Column(verbose_name="Seq.", attrs={"td": {"class": "text-nowrap"}})
@@ -26,20 +32,20 @@ class ReleaseTable(tables.Table):
         attrs={"td": {"class": "text-nowrap"}},
         template_code="{{ record.ec_total }} / {{record.capacity}}",
     )
-    status = tables.TemplateColumn(
+    status = tables.Column(
         verbose_name="Status",
         orderable=False,
         empty_values=(),
-        template_code="""
-            {% if record.ec_total >= record.capacity %}
-                <span class="badge text-bg-danger">Lotado</span>
-            {% elif record.is_open %}
-                <span class="badge text-bg-warning">Aberta</span>
-            {% else %}
-                <span class="badge text-bg-success">Concluído</span>
-            {% endif %}
-        """,
+        attrs={"th": {"class": "text-center"}},
     )
+
+    def render_status(self, record):
+        return format_html(
+            '<span class="badge {}">{}</span>',
+            RELEASE_BADGE_CLASSES[record.status_label],
+            record.status_label,
+        )
+
     action = tables.TemplateColumn(
         verbose_name="Ações",
         orderable=False,
@@ -118,9 +124,7 @@ class ECTable(tables.Table):
 
     def render_status(self, record):
         badge_class = STATUS_BADGE_CLASSES.get(record.status, "text-bg-secondary")
-        return format_html(
-            '<span class="badge {}">{}</span>', badge_class, record.get_status_display()
-        )
+        return format_html('<span class="badge {}">{}</span>', badge_class, record.status_label())
 
     class Meta:
         model = EC
