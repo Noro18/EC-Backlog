@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load render_table from django_tables2 %}
+
+{% block title %}Release {{ release.release_code }} — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h3 class="mb-1">{{ release.release_code }}</h3>
+        <p class="text-muted mb-0">
+            Criada em {{ release.created_at|date:"d/m/Y" }}
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        {% if release.ec_count >= release.capacity %}
+            <span class="badge text-bg-danger">Lotado</span>
+        {% elif release.is_open %}
+            <span class="badge text-bg-warning">Aberta</span>
+        {% else %}
+            <span class="badge text-bg-success">Concluído</span>
+        {% endif %}
+        <a href="{% url 'backlog:release_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-semibold">Informações da Release</div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small mb-1">Ano</label>
+                        <p class="mb-0 fw-semibold">{{ release.year }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small mb-1">Sequência</label>
+                        <p class="mb-0 fw-semibold">{{ release.number_sequence }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small mb-1">Nu. EC</label>
+                        <p class="mb-0 fw-semibold">{{ ec_used }}/{{ release.capacity }} EC</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small mb-1">Go-Live</label>
+                        <p class="mb-0">
+                            {% if release.production_go_live_date %}
+                                {{ release.production_go_live_date|date:"d/m/Y" }}
+                            {% else %}
+                                <span class="text-body-tertiary">Não definido</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white fw-semibold">ECs desta Release</div>
+            <div class="card-body">
+                {% render_table ec_table %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 p-3" style="background:linear-gradient(180deg,#005EFF,#0036A6);color:#d6e0f2;">
+            <h6 class="fw-bold text-white"><i class="bi bi-info-circle me-1"></i> Regra de Capacidade</h6>
+            <p class="mb-0 mt-3" style="font-size:13px;line-height:2">
+                Uma Release aceita no máximo <strong class="text-white">{{ release.capacity }} ECs</strong>.
+                Ao atingir o limite ela é encerrada para novas solicitações, mesmo que
+                nem todas estejam aprovadas.
+            </p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
