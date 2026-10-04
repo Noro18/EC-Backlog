@@ -1,4 +1,4 @@
-from django.views.generic import TemplateView, DetailView
+from django.views.generic import DetailView, TemplateView
 from django_tables2 import SingleTableView
 
 from .models import EC, Release
@@ -27,6 +27,7 @@ class NewECView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from apps.accounts.models import User
+
         from .models import Release
 
         context["releases"] = Release.objects.all()
