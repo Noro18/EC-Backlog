@@ -1,21 +1,24 @@
-<header class="navbar navbar-dark sticky-top bg-info flex-md-nowrap py-3 px-4 shadow">
-    <a class="navbar-brand fs-5 fw-semibold me-0" style="margin-left: 25rem;" href="#">Sistema de Gestão de Backlog EC</a>
-    <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
+<header class="navbar navbar-dark sticky-top bg-primary flex-md-nowrap py-4 px-6 shadow navbar-banner-fade">
+    <a class="navbar-brand fw-semibold me-0 fs-2" style="margin-left: 25rem;" href="#">Sistema de Gestão de Backlog EC</a>
     </button>
     <div class="navbar-nav ms-auto me-5">
 
         <div class="nav-item text-nowrap d-flex align-items-center gap-2">
 
-            <span class="text-white me-3">User</span>
+            <span class="text-white fw-semiboldf fs-5 me-3">User</span>
             
             <a href="#" class="text-white text-decoration-none d-flex align-items-center" title="perfil">
                 <i class="bi bi-person-circle text-white fs-5"></i>
             </a>
             <div class="vr text-white opacity-50"></div>
-            <a href="#" class="text-white text-decoration-none d-flex align-items-center me-" title="Sair / Logout">
-                <i class="bi bi-box-arrow-right fs-5"></i>
-            </a>
+            <form action="{% url 'accounts:logout' %}" method="post" class="d-inline">
+                {% csrf_token %}
+                <button type="submit"
+                        class="btn btn-link p-0 text-white text-decoration-none d-flex align-items-center"
+                        title="Sair / Logout">
+                    <i class="bi bi-box-arrow-right fs-5"></i>
+                </button>
+            </form>
         </div>
         
     </div>

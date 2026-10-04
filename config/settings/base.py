@@ -152,3 +152,7 @@ Q_CLUSTER = {
     "retry": 120,
     "max_attempts": 3,
 }
+
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "backlog:ec_list"
+LOGOUT_REDIRECT_URL = "accounts:login"

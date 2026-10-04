@@ -1,146 +1,73 @@
 {% extends "base.html" %}
 
-{% block title %}Sistema de Gestão de Backlog EC{% endblock %}
+{% block title %}Nova Solicitação de EC — Sistema de Gestão de Backlog EC{% endblock %}
 
 {% block content %}
-
-<div class="mb-3">
-    <h3 class="mb-1">Nova Solicitação de EC</h3>
-    <p class="text-muted mb-0">Preencha os dados da solicitação abaixo.</p>
+<div class="mb-4">
+  <div>
+    <h4 class="mb-1"><i class="bi bi-plus-circle me-1"></i> Formulário de Nova EC</h4>
+    <p class="text-muted mb-0">Preencha os dados da solicitação — a EC será atribuída automaticamente ao CD.</p>
+  </div>
 </div>
 
-<form action="#" method="post" enctype="multipart/form-data" novalidate>
-    {% csrf_token %}
-
-    <div class="card">
-        <div class="card-header bg-white fw-semibold">Identificação</div>
-        <div class="card-body">
-            <div class="row g-3">
-
-                <div class="col-md-4">
-                    <label for="id_ec_id" class="form-label">EC ID</label>
-                    <input type="text" class="form-control" id="id_ec_id" name="ec_id" readonly>
-                    <div class="form-text">O número é preenchido automaticamente pelo sistema.</div>
-                </div>
-
-                <div class="col-md-8">
-                    <label for="id_title" class="form-label">Título <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="id_title" name="title" required maxlength="200">
-                </div>
-
-            </div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm p-4">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Referência (CR / RT / COR) <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-hash"></i></span>
+            <input type="text" name="reference" class="form-control" placeholder="ex.: CR2026042" required>
+          </div>
         </div>
-    </div>
-
-    <div class="card mt-3">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label for="reference" class="form-label">Referencia (CR / RT / COR)</label>
-                    <input type="text" class="form-control" id="reference" name="nu_reference"  placeholder="ex: CR2026003">
-                </div>
-            </div>
+        <div class="mb-3">
+          <label class="form-label">Descrição da Alteração <span class="text-danger">*</span></label>
+          <textarea name="description" class="form-control" rows="4" placeholder="Descreva a alteração técnica com clareza..." required></textarea>
         </div>
-    </div>
-
-
-    <div class="card mt-3">
-        <div class="card-header bg-white fw-semibold">Descrição</div>
-        <div class="card-body">
-            <label for="id_description" class="form-label">Descrição da EC <span class="text-danger">*</span></label>
-            <textarea class="form-control" id="id_description" name="description" rows="5" required></textarea>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Selecionar Release <span class="text-danger">*</span></label>
+            <select name="release" class="form-select" required>
+              {% for r in releases %}
+                {% if r.is_full %}
+                <option value="{{ r.id }}" disabled>{{ r.release_code }} — Lotado ({{ r.ecs.count }}/{{ r.capacity }})</option>
+                {% else %}
+                <option value="{{ r.id }}">{{ r.release_code }} (aberta — {{ r.ecs.count }}/{{ r.capacity }})</option>
+                {% endif %}
+              {% empty %}
+                <option value="" disabled>Não há releases abertas</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Atribuir a CD <span class="text-danger">*</span></label>
+            <select name="responsible_cd" class="form-select" required>
+              {% for r in reviewers %}
+                <option value="{{ r.id }}">{{ r.get_full_name|default:r.username }} ({{ r.username }})</option>
+              {% empty %}
+                <option value="" disabled>Não há CDs disponíveis</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
-    </div>
-
-    <div class="card mt-3">
-        <div class="card-header bg-white fw-semibold">Documento</div>
-        <div class="card-body">
-            <label for="id_document" class="form-label">Especificação (.pdf, .doc, .docx)</label>
-            <input type="file" class="form-control" id="id_document" name="document">
+        <div class="mb-3 mt-3">
+          <label class="form-label">Carregar Documento (.docx / .pdf)</label>
+          <input type="file" name="document" class="form-control" accept=".docx,.pdf">
         </div>
-    </div>
-
-        <div class="card mt-3">
-        <div class="card-header bg-white fw-semibold">Lancamento</div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="id_release" class="form-label">ID Lancamento</label>
-                    <select class="form-select" id="id_release" name="release">
-                        <option value="">TT_ON_2026-001</option>
-                        <option value="">TT_ON_2026-002</option>
-                        <option value="">+ Cria Nova Release</option>
-                    </select>
-                </div>
-
-            </div>
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-dark"><i class="bi bi-send me-1"></i> Criar EC</button>
+          <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary">Cancelar</a>
         </div>
+      </form>
     </div>
-
-    {% comment %} <div class="card mt-3">
-        <div class="card-header bg-white fw-semibold">Classificação</div>
-        <div class="card-body">
-            <div class="row g-3">
-
-                <div class="col-md-4">
-                    <label for="id_priority" class="form-label">Prioridade</label>
-                    <select class="form-select" id="id_priority" name="priority">
-                        <option value="low">Baixa</option>
-                        <option value="medium" selected>Média</option>
-                        <option value="high">Alta</option>
-                        <option value="critical">Crítica</option>
-                    </select>
-                </div>
-
-                <div class="col-md-4">
-                    <label for="id_impact" class="form-label">Impacto</label>
-                    <select class="form-select" id="id_impact" name="impact">
-                        <option value="low">Baixo</option>
-                        <option value="medium" selected>Médio</option>
-                        <option value="high">Alto</option>
-                    </select>
-                </div>
-
-                <div class="col-md-4">
-                    <label for="id_site" class="form-label">Localização / Site</label>
-                    <input type="text" class="form-control" id="id_site" name="site" maxlength="150">
-                </div>
-
-            </div>
-        </div>
-    </div> {% endcomment %}
-
-    <div class="card mt-3">
-        <div class="card-header bg-white fw-semibold">Responsáveis</div>
-        <div class="card-body">
-            <div class="row g-3">
-
-                {% comment %} <div class="col-md-6">
-                    <label for="id_requester" class="form-label">Solicitante</label>
-                    <select class="form-select" id="id_requester" name="requester">
-                        <option value="">Selecione...</option>
-                    </select>
-                </div> {% endcomment %}
-
-                <div class="col-md-6">
-                    <label for="id_cd" class="form-label">Chefe de Departamento (CD)</label>
-                    <select class="form-select" id="id_cd" name="cd">
-                        <option value="">A definir</option>
-                        <option value="">Estefania Marques</option>
-                    </select>
-                </div>
-
-            </div>
-        </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm p-4 mt-3 bg-warning">
+      <h6 class="fw-bold"><i class="bi bi-lightbulb me-1"></i> ATENÇÃO</h6>
+      <small class="text-muted">Escreva corretamente a referência CR/RT para que o CD possa verificá-la rapidamente.</small>
     </div>
-
-    <div class="d-flex justify-content-end gap-2 mt-4 mb-3">
-        <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-info">
-            <i class="bi bi-check-lg"></i> Salvar Solicitação
-        </button>
-    </div>
-
-</form>
-
+  </div>
+</div>
 {% endblock %}
