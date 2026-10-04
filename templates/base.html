@@ -16,7 +16,7 @@
     {% include 'components/navbar.html' %}
 
     <div class="d-flex">
-        <aside id="sidebarMenu" class="col-lg-2 bg-white border-end vh-100 p-3 flex-shrink-0 overflow-auto">
+        <aside id="sidebarMenu" class="col-lg-2 border-end vh-100 p-3 flex-shrink-0 overflow-auto">
 
             <p class="nav-section">Main</p>
             <ul class="nav flex-column mb-4">
@@ -33,7 +33,6 @@
             {% if user.role == 'requester' %}
             <p class="nav-section">Solicitações</p>
             <ul class="nav flex-column mb-4">
-                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-file-earmark-text"></i> Solicitação</a></li>
                 <li class="nav-item"><a href="{% url "backlog:ec_form" %}" class="nav-link"><i class="bi bi-plus-circle"></i> Nova Solicitação</a></li>
                 <li class="nav-item"><a href="{% url "backlog:ec_list" %}" class="nav-link"><i class="bi bi-list-check"></i> Minhas Solicitações</a></li>
             </ul>
@@ -60,7 +59,7 @@
             {% if user.role == 'administrator' %}
             <p class="nav-section">Gestão</p>
             <ul class="nav flex-column mb-4">
-                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-journals"></i> Gestão de ECs</a></li>
+                <li class="nav-item"><a href="{% url "backlog:ec_list" %}" class="nav-link"><i class="bi bi-journals"></i> Gestão de ECs</a></li>
                 <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-people"></i> Gestão de Utilizadores</a></li>
                 <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-folder-check"></i> Versões de Documentos</a></li>
                 <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-journal-text"></i> Registo de Auditoria</a></li>
@@ -81,16 +80,7 @@
 
     <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
-    <script>
-        const menu = document.getElementById('sidebarMenu');
-        menu.addEventListener('click', (e) => {
-            const link = e.target.closest('.nav-link');
-            menu.querySelectorAll('.nav-link').forEach((el) => {
-                el.classList.remove('active', 'bg-info', 'text-white');
-            });
-            link.classList.add('active', 'bg-info', 'text-white');
-        });
-    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -150,3 +150,82 @@ table.table td.font-monospace,
 table.table td .fw-semibold {
     font-variant-numeric: tabular-nums;
 }
+
+.sidebar-fade-img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 70%, rgba(0, 0, 0, 0) 100%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 70%, rgba(0, 0, 0, 1) 100%); /* sesuaikan persentase titik pudar */
+}
+
+.navbar-banner-fade {
+    position: relative;
+    overflow: hidden;
+}
+
+.navbar-banner-fade::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    background-image: url('../images/banner.svg');
+    background-size: cover;
+    background-position: center;
+    
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.8) 20%, rgba(0,0,0,0) 80%);
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.8) 20%, rgba(0,0,0,0) 80%);
+    
+    z-index: 0;
+    pointer-events: none;
+}
+
+.navbar-banner-fade > * {
+    position: relative;
+    z-index: 1;
+}
+
+
+#sidebarMenu {
+    background-color: #f4f8ff !important;
+    border-right-color: #dbeafe !important;
+}
+
+
+#sidebarMenu .nav-section {
+    color: #01cfff !important; 
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+
+#sidebarMenu .nav-link {
+    color: #0b2a6b !important; 
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#sidebarMenu .nav-link:hover {
+    background-color: #e3eeff !important; 
+    color: #0b2a6b !important;
+}
+
+
+#sidebarMenu .nav-link.active,
+#sidebarMenu .nav-link:focus-visible,
+#sidebarMenu .nav-link[aria-current="page"] {
+    background-color: #005cfa !important; 
+    color: #ffffff !important;           
+}
+
+#sidebarMenu .nav-link i {
+    color: #01cfff;
+}
+
+#sidebarMenu .nav-link.active i {
+    color: #ffffff;
+}
+
