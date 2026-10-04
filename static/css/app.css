@@ -23,6 +23,39 @@
     --bs-body-font-size: 0.9375rem;
     --bs-body-line-height: 1.5;
     --bs-body-color: #1f2733;
+
+    /* TT brand colors */
+    --tt-blue: #005EFF;
+    --tt-blue-bg: #F0F5FF;
+    --tt-blue-text: #001C4C;
+    --tt-blue-border: #8CB7FF;
+    --tt-cyan: #00CFFF;
+    --tt-dark-grey: #141414;
+
+    /* TT status palette - soft tint, text stays readable */
+    --tt-yellow: #FABD0D;
+    --tt-yellow-bg: #FFFBF0;
+    --tt-yellow-text: #4B3904;
+    --tt-yellow-border: #FDE192;
+
+    --tt-green: #00FFB2;
+    --tt-green-bg: #F0FFFA;
+    --tt-green-text: #004C35;
+    --tt-green-border: #8CFFDC;
+
+    --tt-red: #FF0F1F;
+    --tt-red-bg: #FFF1F2;
+    --tt-red-text: #4C0409;
+    --tt-red-border: #FF939A;
+
+    --tt-cyan-bg: #F0FCFF;
+    --tt-cyan-text: #003E4C;
+    --tt-cyan-border: #8CE9FF;
+
+    --tt-slate: #303030;
+    --tt-slate-bg: #F3F3F3;
+    --tt-slate-text: #0E0E0E;
+    --tt-slate-border: #A2A2A2;
 }
 
 body {
@@ -227,5 +260,80 @@ table.table td .fw-semibold {
 
 #sidebarMenu .nav-link.active i {
     color: #ffffff;
+}
+
+/* ==========================================================================
+   Status badges - soft TT palette (kombinasi kuning,hijau,merah,abu)
+   ========================================================================== */
+.badge.bg-warning,
+.badge.text-bg-warning {
+    background-color: var(--tt-yellow-bg) !important;
+    color: var(--tt-yellow-text) !important;
+    border: 1px solid var(--tt-yellow-border);
+    font-weight: 600;
+}
+
+.badge.bg-success,
+.badge.text-bg-success {
+    background-color: var(--tt-green-bg) !important;
+    color: var(--tt-green-text) !important;
+    border: 1px solid var(--tt-green-border);
+    font-weight: 600;
+}
+
+.badge.bg-danger,
+.badge.text-bg-danger {
+    background-color: var(--tt-red-bg) !important;
+    color: var(--tt-red-text) !important;
+    border: 1px solid var(--tt-red-border);
+    font-weight: 600;
+}
+
+.badge.bg-secondary,
+.badge.text-bg-secondary {
+    background-color: var(--tt-slate-bg) !important;
+    color: var(--tt-slate-text) !important;
+    border: 1px solid var(--tt-slate-border);
+    font-weight: 600;
+}
+
+.badge.bg-info,
+.badge.text-bg-info {
+    background-color: var(--tt-cyan-bg) !important;
+    color: var(--tt-cyan-text) !important;
+    border: 1px solid var(--tt-cyan-border);
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Timeline (Histórico) - gaya git branch: garis vertikal + titik
+   Markup: <ul class="ec-timeline"> dengan <li> di dalamnya.
+   ========================================================================== */
+.ec-timeline {
+    list-style: none;
+    margin: 0;
+    padding-left: 1.25rem;
+    border-left: 2px solid var(--tt-blue-border);
+}
+
+.ec-timeline > li {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.ec-timeline > li:last-child {
+    margin-bottom: 0;
+}
+
+.ec-timeline > li::before {
+    content: "";
+    position: absolute;
+    left: -1.25rem;
+    top: 0.35rem;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    background-color: var(--tt-blue);
+    box-shadow: 0 0 0 3px var(--bs-body-bg);
 }
 
