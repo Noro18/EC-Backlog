@@ -4,11 +4,15 @@ Read `tests/test_models.py` first: same module-level `pytestmark`, same
 `class Test...:` grouping style.
 """
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
+from apps.backlog.models import Release
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory
 
 pytestmark = pytest.mark.django_db  # marka wainihra test ida access o sentuh database ka lae
@@ -79,6 +83,16 @@ class TestReleaseList:
 
         assert "Lotado" in html
 
+    def test_code_links_to_detail_and_no_action_column(self, client):
+        release = ReleaseFactory()
+        response = client.get(reverse("backlog:release_list"))
+        table = response.context["table"]
+
+        assert f'<a href="{reverse("backlog:release_detail", args=[release.pk])}"' in (
+            response.content.decode()
+        )
+        assert "action" not in table.columns.names()
+
 
 class TestReleaseDetail:
     def test_returns_200_and_release_in_context(self, client):
@@ -111,3 +125,62 @@ class TestReleaseDetail:
         html = response.content.decode()
 
         assert "Lotado" in html
+
+    def test_shows_only_this_releases_ecs(self, client):
+        mine = ReleaseFactory()
+        other = ReleaseFactory()
+        my_ec = ECFactory(release=mine)
+        other_ec = ECFactory(release=other)
+        html = client.get(reverse("backlog:release_detail", args=[mine.pk])).content.decode()
+
+        assert my_ec.reference in html
+        assert other_ec.reference not in html
+
+    def test_empty_release_renders_empty_state(self, client):
+        release = ReleaseFactory()
+        response = client.get(reverse("backlog:release_detail", args=[release.pk]))
+
+        assert response.status_code == 200
+        assert "Nenhuma EC encontrada." in response.content.decode()
+
+    def test_query_count_does_not_grow_with_ecs(self, client):
+        release = ReleaseFactory()
+        for _ in range(3):
+            ECFactory(release=release)
+        with CaptureQueriesContext(connection) as small:
+            client.get(reverse("backlog:release_detail", args=[release.pk]))
+
+        for _ in range(7):
+            ECFactory(release=release)
+
+        with CaptureQueriesContext(connection) as large:
+            client.get(reverse("backlog:release_detail", args=[release.pk]))
+
+        assert len(large) == len(small)
+
+    def test_page_param_shows_second_page_of_ecs(self, client):
+        release = ReleaseFactory()
+        ecs = [ECFactory(release=release) for _ in range(30)]
+
+        url = reverse("backlog:release_detail", args=[release.pk])
+        page1 = client.get(url).content.decode()
+        page2 = client.get(url + "?page=2").content.decode()
+
+        shown_on_p1 = [ec for ec in ecs if ec.reference in page1]
+        shown_on_p2 = [ec for ec in ecs if ec.reference in page2]
+
+        assert len(shown_on_p1) == 25
+        assert len(shown_on_p2) == 5
+        assert not set(shown_on_p1) & set(shown_on_p2)
+
+    def test_dates_follow_spec_format(self, client):
+        release = ReleaseFactory()
+        Release.objects.filter(pk=release.pk).update(
+            created_at=datetime(2026, 10, 5, 9, 30, tzinfo=ZoneInfo("Asia/Dili")),
+            production_go_live_date=None,
+        )
+        html = client.get(reverse("backlog:release_detail", args=[release.pk])).content.decode()
+
+        assert "05/10/2026 09:30" in html
+        assert "Não definido" not in html
+        assert "—" in html
