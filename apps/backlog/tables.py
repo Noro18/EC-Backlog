@@ -3,7 +3,7 @@ from django.utils.html import format_html
 
 from .models import EC, Release
 
-STATUS_BADGE_CLASSES = {
+EC_BADGE_CLASSES = {
     "in_validation": "text-bg-warning",
     "approved": "text-bg-success",
     "rejected": "text-bg-danger",
@@ -46,18 +46,6 @@ class ReleaseTable(tables.Table):
             record.status_label,
         )
 
-    action = tables.TemplateColumn(
-        verbose_name="Ações",
-        orderable=False,
-        empty_values=(),
-        template_code="""
-            <a href="{% url 'backlog:release_detail' record.id %}"
-                class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-eye"></i> Ver
-            </a>
-        """,
-    )
-
     class Meta:
         model = Release
         template_name = "django_tables2/bootstrap5.html"
@@ -67,7 +55,6 @@ class ReleaseTable(tables.Table):
             "number_sequence",
             "ec_total",
             "status",
-            "action",
         )
         attrs = {"class": "table table-sm table-hover align-middle mb-0"}
         empty_text = "Nenhuma Release encontrada."
@@ -96,7 +83,7 @@ class ECTable(tables.Table):
         verbose_name="Criado em",
         attrs={"td": {"class": "text-nowrap font-monospace text-body-secondary"}},
     )
-    
+
     status = tables.Column(verbose_name="Status", attrs={"th": {"class": "text-center"}})
     is_imported = tables.TemplateColumn(
         verbose_name="Origem",
@@ -123,8 +110,10 @@ class ECTable(tables.Table):
     )
 
     def render_status(self, record):
-        badge_class = STATUS_BADGE_CLASSES.get(record.status, "text-bg-secondary")
-        return format_html('<span class="badge {}">{}</span>', badge_class, record.status_label())
+        badge_class = EC_BADGE_CLASSES.get(record.status, "text-bg-secondary")
+        return format_html(
+            '<span class="badge {}">{}</span>', badge_class, record.get_status_display()
+        )
 
     class Meta:
         model = EC
