@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load render_table from django_tables2 %}
+
+{% block title %}Gestão de Utilizadores — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h3 class="mb-1">Gestão de Utilizadores</h3>
+        <p class="text-muted mb-0">Lista de todos os utilizadores registados no sistema.</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        {% render_table table %}
+    </div>
+</div>
+{% endblock %}
