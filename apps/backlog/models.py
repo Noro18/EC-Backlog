@@ -46,7 +46,7 @@ class Release(TimeStampedModel):
 
 
 class EC(TimeStampedModel):
-    """An Engineering Change. Spec 4.4.
+    """A Configuration Specification (EC). Spec 4.4.
 
     Identity is `year` + `number_sequence`; `ec_code` is computed, never stored.
     `is_imported` marks rows loaded from the historical Excel, which may leave

@@ -2,7 +2,7 @@
 
 ## Objective
 
-`GET|POST /backlog/new_ec/` creates one Engineering Change from a form and lists it in the
+`GET|POST /backlog/new_ec/` creates one Configuration Specification (EC) from a form and lists it in the
 backlog.
 
 - As an authenticated requester, I fill in the reference, description, a release and a CD, and
