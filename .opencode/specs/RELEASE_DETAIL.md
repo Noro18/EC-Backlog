@@ -2,7 +2,7 @@
 
 ## Objective
 
-`/backlog/release/<int:pk>/` shows one Release and the ECs grouped under it.
+`/backlog/detail_release/<int:pk>/` shows one Release and the ECs grouped under it.
 
 - As a visitor, I click a release in the list and see that release's identity: code, year,
   sequence, occupancy (`2 / 10`), status badge, go-live date, creation timestamp.
@@ -38,9 +38,12 @@ and it is Deferred item 3 in `RELEASE_MODULE.md`, where it was recorded as the m
 1. **Reuse `ECTable` unchanged.** Consequence accepted: the `Release` column repeats the same
    release name on every row of a page that is already about that release. Revisit when the
    table is reused somewhere it matters. This keeps the slice small — no second table class.
-2. **Automated tests, TDD.** Deviation from `EC_DETAIL.md` (which chose manual verification)
+2. **URL path is `detail_release/<int:pk>/`, not `release/<int:pk>/`.** Agreed 2026-10-05:
+   the codebase already ships `detail_ec/<int:pk>/`, so `detail_ec`/`detail_release` stays
+   symmetric. The `name="release_detail"` (used by `{% url %}`/`reverse`) is unchanged.
+3. **Automated tests, TDD.** Deviation from `EC_DETAIL.md` (which chose manual verification)
    in favour of the ARCHITECTURE §9 default. Red test first, then the view.
-3. **Navigation:** the release code in the list becomes the link to the detail page, and the
+4. **Navigation:** the release code in the list becomes the link to the detail page, and the
    `action` column is **deleted** from `ReleaseTable`. This closes Outstanding item 1 of
    `RELEASE_MODULE.md` (the dead `href="#"`) in the same PR.
 
@@ -62,7 +65,7 @@ uv run python manage.py runserver        # manual: /backlog/release/ → click a
 ```
 apps/backlog/
 ├── views.py            # ReleaseDetailView(DetailView) + ReleaseListView link
-├── urls.py             # release/<int:pk>/  name="release_detail"
+├── urls.py             # detail_release/<int:pk>/  name="release_detail"
 ├── tables.py            # ReleaseTable: code → link, action column deleted
 └── tests/
     ├── test_views.py   # new tests (see Testing Strategy)
@@ -116,7 +119,7 @@ pytest-django + factory-boy, in `apps/backlog/tests/test_views.py` (same class, 
 
 Status key: ⏳ all pending — this spec is not yet approved.
 
-1. ⏳ `GET /backlog/release/<pk>/` returns 200 for an existing release.
+1. ⏳ `GET /backlog/detail_release/<pk>/` returns 200 for an existing release.
 2. ⏳ A bad pk returns **404**.
 3. ⏳ The page shows an EC belonging to this release, and **does not** show an EC belonging
    to a different release (proves the filter is real, not "all ECs").
@@ -142,7 +145,7 @@ Status key: ⏳ all pending — this spec is not yet approved.
 
 ## Success Criteria
 
-- `/backlog/release/1/` renders that release's header and **only** its ECs; no hardcoded
+- `/backlog/detail_release/1/` renders that release's header and **only** its ECs; no hardcoded
   values in `release_detail.html`.
 - A bad pk returns 404; an empty release returns a clean empty state.
 - Query count does not grow with the number of EC rows.
