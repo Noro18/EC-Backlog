@@ -86,7 +86,8 @@
                     <option value="in_validation" {% if request.GET.status == "in_validation" %}selected{% endif %}>Em Validação</option>
                     <option value="approved" {% if request.GET.status == "approved" %}selected{% endif %}>Aprovada</option>
                     <option value="rejected" {% if request.GET.status == "rejected" %}selected{% endif %}>Rejeitada</option>
-                    <option value="closed" {% if request.GET.status == "sent_to_des" %}selected{% endif %}>Fechada</option>
+                    <option value="sent_to_des" {% if request.GET.status == "sent_to_des" %}selected{% endif %}>Enviada para DES</option>
+                    <option value="closed" {% if request.GET.status == "closed" %}selected{% endif %}>Fechada</option>
                 </select>
             </div>
             <div class="col-md-4 text-md-end">
