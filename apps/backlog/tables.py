@@ -14,8 +14,8 @@ EC_BADGE_CLASSES = {
 
 RELEASE_BADGE_CLASSES = {
     "Lotado": "text-bg-danger",
-    "Aberta": "text-bg-warning",
-    "Concluído": "text-bg-success",
+    "Aberta": "text-bg-success",
+    "Concluído": "text-bg-secondary",
 }
 
 

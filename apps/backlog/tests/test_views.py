@@ -83,6 +83,18 @@ class TestReleaseList:
 
         assert "Lotado" in html
 
+    def test_badge_palette_matches_spec(self, client):
+        open_release = ReleaseFactory(capacity=3)
+        ECFactory(release=open_release)
+        ReleaseFactory(capacity=3, is_open=False)
+        full_release = ReleaseFactory(capacity=1)
+        ECFactory(release=full_release)
+        html = client.get(reverse("backlog:release_list")).content.decode()
+
+        assert '<span class="badge text-bg-success">Aberta</span>' in html
+        assert '<span class="badge text-bg-secondary">Concluído</span>' in html
+        assert '<span class="badge text-bg-danger">Lotado</span>' in html
+
     def test_code_links_to_detail_and_no_action_column(self, client):
         release = ReleaseFactory()
         response = client.get(reverse("backlog:release_list"))
@@ -125,6 +137,7 @@ class TestReleaseDetail:
         html = response.content.decode()
 
         assert "Lotado" in html
+        assert '<span class="badge text-bg-danger">Lotado</span>' in html
 
     def test_shows_only_this_releases_ecs(self, client):
         mine = ReleaseFactory()

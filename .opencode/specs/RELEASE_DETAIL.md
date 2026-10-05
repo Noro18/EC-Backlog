@@ -157,7 +157,6 @@ Status key: ⏳ all pending — this spec is not yet approved.
 ## Deferred
 
 - `ReleaseTable` Go-live and Criado em columns (`RELEASE_MODULE.md` Outstanding #2).
-- Badge palette vs spec text (Outstanding #3).
 - `test_selectors.py` and list tests 5, 6, 7, 9 (RELEASE_MODULE tests ⏳).
 - Hiding `ECTable`'s redundant `Release` column (Decision 1 above).
 

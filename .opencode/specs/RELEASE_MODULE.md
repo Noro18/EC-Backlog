@@ -170,9 +170,11 @@ Code items still required to call Slice 1 done — all ⏳, none blocking the ap
    "no action column" and renders a dead `href="#"`.
 2. ⏳ Add `production_go_live_date` (`d/m/Y`, `—` when `None`) and `created_at`
    (`d/m/Y H:i`) columns.
-3. ⏳ Badge palette vs this spec: code renders Aberta/`text-bg-warning` and
-   Concluído/`text-bg-success`; this doc said Aberto/`success`, Concluído/`secondary`.
-   Either change the classes or log the deviation in the Decisions log below.
+3. ✅ Badge palette vs this spec: the code rendered Aberta/`text-bg-warning` and
+   Concluído/`text-bg-success`, while the §7 table says `text-bg-success` /
+   `text-bg-secondary`. The classes now match the table, locked by
+   `test_badge_palette_matches_spec`. The label was left as "Aberta" — see the
+   Decisions log, the table and the prose below disagree with each other.
 4. ⏳ `uv run ruff check . --fix && uv run ruff format .` — `I001` in `apps/backlog/views.py`
    is the last error; then full `uv run pytest`.
 5. ✅ Commit the working slice — this PR.
@@ -187,6 +189,7 @@ Code items still required to call Slice 1 done — all ⏳, none blocking the ap
 | 2026-10-02 | Selector tests live in `test_selectors.py`, not `test_views.py` — a selector is not a view. |
 | 2026-10-02 | Badge precedence: **fullness wins over `is_open`** — a closed+full release renders "Lotado", not "Concluído". Locked by `test_closed_and_full_renders_lotado`. |
 | 2026-10-02 | Status column reads the **annotation** `record.ec_total`, never the `ec_count` property — the property costs 1 query per row (N+1, caught as `12 == 5`). |
+| 2026-10-05 | Badge **classes** aligned with the §7 table: Aberta → `text-bg-success`, Concluído → `text-bg-secondary`, Lotado unchanged (`text-bg-danger`). Locked by `test_badge_palette_matches_spec`. The **label** stays "Aberta" (feminine, agrees with "Release" and with the prose at line 127) rather than the table's "Aberto" — that spelling was never changed because it would only churn tests, and the two spots in this document disagree. |
 
 ## Deferred (next slices, each needs its own spec)
 
