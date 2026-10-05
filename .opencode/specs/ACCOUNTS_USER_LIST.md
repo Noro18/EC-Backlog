@@ -3,10 +3,14 @@
 ## Objective
 
 Build the first working page under the administrator sidebar: a read-only list of users at
-`/accounts/users/`. Today `base.html:64` renders "Gestão de Utilizadores" as `href="#"`, so the
+`/users/`. Today `base.html:63` renders "Gestão de Utilizadores" as `href="#"`, so the
 menu is dead.
 
-- As an administrator, I open `/accounts/users/` and see a table of every user.
+> URL note (updated 2026-10-05): `config/urls.py` already mounts `apps.accounts.urls` at the root
+> (`path("", include("apps.accounts.urls"))`, shipped in PR #20), so the route is `/users/`, **not**
+> `/accounts/users/`. Nothing to add to `config/urls.py`.
+
+- As an administrator, I open `/users/` and see a table of every user.
 - As an administrator, I sort by username or role and paginate the list.
 - As an administrator, I read each user's name, username, email, role and active state.
 - As a non-administrator, I am refused.
@@ -25,9 +29,12 @@ No new dependency.
 ```bash
 uv run pytest apps/accounts/tests/test_views.py   # feature tests
 uv run pytest                                     # full suite
-uv run ruff check . && uv run ruff format .       # lint
-uv run python manage.py runserver                 # manual check at /accounts/users/
+uv run ruff check .                               # lint
+uv run python manage.py runserver                 # manual check at /users/
 ```
+
+> `uv run ruff format .` is **not** part of the done-check right now: 5 pre-existing files are
+> already unformatted, so it fails regardless of this work. Run `ruff check .` instead.
 
 ## System Architecture
 
@@ -45,7 +52,7 @@ apps/accounts/
 templates/accounts/
 └── user_list.html      # NEW
 
-config/urls.py          # add include("apps.accounts.urls")
+config/urls.py          # ALREADY INCLUDES accounts urls at root — no change
 ```
 
 Import direction: `accounts` imports from nothing (§5). `tables.py` imports only `django_tables2`
@@ -60,7 +67,7 @@ No migration. No model edits.
 
 ## Input / Output
 
-**Input:** HTTP GET on `/accounts/users/`. Optional query params handled by django-tables2:
+**Input:** HTTP GET on `/users/`. Optional query params handled by django-tables2:
 `?sort=username`, `?page=2`.
 
 **Output:**
@@ -69,16 +76,15 @@ No migration. No model edits.
 |---|---|---|
 | Administrator, valid | 200 | Table of users, `table` in context |
 | Non-administrator (any role) | 403 | Forbidden — must not see the page |
-| Anonymous | 302 | → `admin:login` (Django default `LOGIN_URL`) |
+| Anonymous | 302 | → `/` (`accounts:login` — `LOGIN_URL` is set in `config/settings/base.py:156`) |
 | Empty table | 200 | Portuguese empty message |
 | Sort by `username` | 200 | Rows ordered A→Z |
 | `?page=2` with >25 users | 200 | Second page reachable |
 
-**Columns:** Nome, Utilizador, Email, Role, Estado, última atividade (`last_login`), Ações.
+**Columns:** Nome, Utilizador, Email, Role, Estado, última atividade (`last_login`).
 
-`Ações` is **not** a link to an edit page — no edit page exists in scope A. It renders as a disabled
-button marked for scope B, so the menu item is visibly wired but not misleading. This is a deliberate
-decision, see Open Questions.
+`Ações` is **omitted** (decided 2026-10-05, see Decisions below): with no edit page in scope A, any
+button would be dead. The column can be added later when scope B ships.
 
 **Role badges** reuse the soft palette already in `static/css/app.css`. Mapping:
 
@@ -100,13 +106,14 @@ decision, see Open Questions.
    placeholder, not `None` or an empty cell that looks like a bug.
 4. **N+1 queries.** The table must resolve with a bounded query count, asserted with
    `django.test.AssertNumQueries`.
-5. **Anonymous access.** `LOGIN_URL` is not set in settings, so Django falls back to
-   `admin:login`. Acceptable for now; a dedicated login page is a separate spec
-   (`.opencode/specs/ACCOUNTS_LOGIN.md`).
+5. **Anonymous access.** `LOGIN_URL = "accounts:login"` **is** set (`config/settings/base.py:156`),
+   so an anonymous request is redirected to `/`, which renders `accounts/login.html` (see
+   `.opencode/specs/ACCOUNTS_LOGIN.md`). The spec's original assumption — no `LOGIN_URL`, Django
+   falling back to `admin:login` — is obsolete.
 6. **Permission check lives in the view, not the template.** `ARCHITECTURE.md` §7 requires
    enforcement in views and services. Hiding a sidebar link is not access control.
-7. **Pre-existing bug, not fixed here.** `base.html:46` compares `user.role == 'CD'` (capital)
-   against the stored value `'cd'`. Unrelated to this page; belongs to the role-sidebar fix.
+7. **`base.html` role bug — FIXED.** `user.role == 'CD'` was corrected to `'cd'` (and the CD sidebar
+   links wired) in PR #24, merged 2026-10-05. Kept here only as history; nothing to do in this spec.
 
 ## Project Structure
 
@@ -133,10 +140,16 @@ Line length 100, ruff-formatted. Match the existing `apps/backlog/tables.py` sty
 
 ## Testing Strategy
 
-TDD: failing test first. This will be the **first view test in the project** — the existing 392 test
-lines live entirely in `test_models.py` files and never perform an HTTP request, so no view has ever
-been exercised. `UserFactory` lives in `apps/backlog/tests/factories.py` (odd location, pre-existing;
-not moved in this scope).
+TDD: failing test first.
+
+> Updated 2026-10-05: this is **no longer the first view test in the project** — `apps/backlog/`
+> gained `test_views.py` in PR #19/#23. Accounts simply gets its own `tests/test_views.py` next to
+> the existing `tests/test_models.py`, mirroring that pattern.
+>
+> **Open decision:** `UserFactory` currently lives in `apps/backlog/tests/factories.py`. Importing it
+> from `apps/accounts` tests would be an *upward* import (`accounts` is the bottom layer, §5).
+> Options: (A) create a tiny `apps/accounts/tests/factories.py`, or (B) import from `backlog`
+> anyway since it is test-only. Not yet decided.
 
 Scope agreed on 2026-10-02: the set is **capped at 6 tests, all about what the page renders**, not
 about backend behaviour. Six are enough for a read-only table and none of them tests a framework
@@ -144,7 +157,7 @@ default that django-tables2 already guarantees.
 
 | # | Test | Frontend concern it protects |
 |---|---|---|
-| 1 | Administrator GETs `/accounts/users/` → 200 | the page opens at all |
+| 1 | Administrator GETs `/users/` → 200 | the page opens at all |
 | 2 | All six real usernames appear in the HTML | the table actually pulled the rows |
 | 3 | Empty `full_name` falls back to the username | no blank name cell |
 | 4 | `last_login` is `null` → Portuguese placeholder, not `None` | never-logged-in users render cleanly |
@@ -175,20 +188,22 @@ is not a quota to fill later.
 
 ## Success Criteria
 
-- `/accounts/users/` returns 200 for an administrator and lists all six real users.
+- `/users/` returns 200 for an administrator and lists all six real users.
 - Role badges, the `full_name` fallback, the `last_login` placeholder and pagination all work.
-- 6 new tests pass; full suite green (50); ruff clean.
+- 6 new tests pass; full suite green (69 = 63 existing + 6 new, as of 2026-10-05); ruff clean.
 - Zero migrations, zero changes to `accounts.User`, zero write operations.
+
+## Decisions (resolved 2026-10-05)
+
+1. **`Ações` column: omit it.** A dead button in a read-only table is noise. Revisit when scope B
+   (role editing) gets its own spec.
+2. **Sidebar link: yes, wire it** — `base.html:63` goes from `href="#"` to
+   `{% url 'accounts:user_list' %}`. It is the only `base.html` line touched. The implementer does
+   this as the final step of the same branch.
 
 ## Open Questions
 
-1. **What should the `Ações` column show?** Options: disabled "Editar" button (honest but ugly),
-   omit the column entirely (cleanest for read-only), or a disabled button with a tooltip saying it
-   arrives in scope B. **Recommend omitting it for now** — a dead button in a read-only table is
-   noise.
-2. **Should the sidebar link be wired in this spec?** `base.html:64` currently points at `#`.
-   Changing that one line makes the menu work. Recommend yes — it is part of "the page exists and is
-   reachable", and it is the only `base.html` line touched.
+None. The two questions above were the last ones outstanding.
 
 ## Branch Name
 
