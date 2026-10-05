@@ -50,6 +50,6 @@ If a request conflicts with ARCHITECTURE.md, stop and ask the user instead of si
 ## Required files to check before starting
 
 1. `docs/ARCHITECTURE.md` — full architecture and rules
-2. `docs/System_Requirements_EC_Backlog_Management_EN_v1_1.pdf` — SRD (source of truth for requirements)
+2. `docs/System_requirements.md` — SRD (source of truth for requirements)
 3. `pyproject.toml` / `uv.lock` — current dependencies
 4. `.python-version` — Python version

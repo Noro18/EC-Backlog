@@ -9,17 +9,11 @@
     <div>
         <h3 class="mb-1">{{ release.release_code }}</h3>
         <p class="text-muted mb-0">
-            Criada em {{ release.created_at|date:"d/m/Y" }}
+            Criada em {{ release.created_at|date:"d/m/Y H:i" }}
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
-        {% if release.ec_count >= release.capacity %}
-            <span class="badge text-bg-danger">Lotado</span>
-        {% elif release.is_open %}
-            <span class="badge text-bg-warning">Aberta</span>
-        {% else %}
-            <span class="badge text-bg-success">Concluído</span>
-        {% endif %}
+        <span class="badge {{ status_badge_class }}">{{ release.status_label }}</span>
         <a href="{% url 'backlog:release_list' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left"></i> Voltar
         </a>
@@ -42,7 +36,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label text-muted small mb-1">Nu. EC</label>
-                        <p class="mb-0 fw-semibold">{{ ec_used }}/{{ release.capacity }} EC</p>
+                            <p class="mb-0 fw-semibold">{{ ec_used }} / {{ release.capacity }} EC</p>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label text-muted small mb-1">Go-Live</label>
@@ -50,7 +44,7 @@
                             {% if release.production_go_live_date %}
                                 {{ release.production_go_live_date|date:"d/m/Y" }}
                             {% else %}
-                                <span class="text-body-tertiary">Não definido</span>
+                                <span class="text-body-tertiary">—</span>
                             {% endif %}
                         </p>
                     </div>

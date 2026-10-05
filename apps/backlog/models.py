@@ -31,6 +31,16 @@ class Release(TimeStampedModel):
         return self.ecs.count()
 
     @property
+    def status_label(self):
+        """Read the annotation `ec_total` — requires `release_with_ec_count()`."""
+        if self.ec_total >= self.capacity:
+            return "Lotado"
+        elif self.is_open:
+            return "Aberta"
+        else:
+            return "Concluído"
+
+    @property
     def is_full(self):
         return self.ec_count >= self.capacity
 
