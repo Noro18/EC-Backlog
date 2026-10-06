@@ -199,7 +199,7 @@ pytest-django + factory-boy, written **before** the code per
 `test_services.py` (a service is not a view); form behaviour lives in
 `TestNewECForm` in `test_views.py`.
 
-Status key: ⏳ pending · ✅ green. Tests 1–6 (services) are green on branch `feat/ec-create-form` (2026-10-06); the role gate and form tests are still pending.
+Status key: ⏳ pending · ✅ green. Tests 1–6 (services) and 7–9 + 11 (role gate) are green on branch `feat/ec-create-form` (2026-10-06); test 10 and the form tests 12–20 are still pending.
 
 **`test_services.py`**
 
@@ -216,12 +216,12 @@ Status key: ⏳ pending · ✅ green. Tests 1–6 (services) are green on branch
 
 **Role gate — `test_views.py`**
 
-7. ⏳ Anonymous `GET /backlog/new_ec/` → redirect to `accounts:login`.
-8. ⏳ A **CD** `GET` → **403** (and the same for a DES user).
-9. ⏳ A **CD** `POST` of an otherwise valid form → **403** with **no** EC created — the test
+7. ✅ Anonymous `GET /backlog/new_ec/` → redirect to `accounts:login`.
+8. ✅ A **CD** `GET` → **403** (and the same for a DES user).
+9. ✅ A **CD** `POST` of an otherwise valid form → **403** with **no** EC created — the test
    that proves the sidebar `{% if %}` is not the permission check.
 10. ⏳ An **administrator** `GET` → 200, and a `POST` → EC created (grant is symmetric).
-11. ⏳ The sidebar renders "Nova Solicitação" for `requester` and `administrator` and hides it
+11. ✅ The sidebar renders "Nova Solicitação" for `requester` and `administrator` and hides it
     from CD.
 
 **`test_views.py::TestNewECForm`**
