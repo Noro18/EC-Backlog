@@ -8,6 +8,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -16,6 +17,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.backlog.models import EC, Release
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
+from apps.documents.models import DocumentVersion
 
 pytestmark = pytest.mark.django_db  # marka wainihra test ida access o sentuh database ka lae
 
@@ -373,3 +375,56 @@ class TestNewECForm:
         assert open_ok in queryset
         assert full not in queryset
         assert closed not in queryset
+
+    def test_upload_creates_first_document_version(self, client):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        release = ReleaseFactory()
+        client.force_login(requester)
+
+        docx = SimpleUploadedFile(
+            "test.docx",
+            b"dummy content",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "CR2026042",
+                "description": "Trocar o resistor R12",
+                "release": release.pk,
+                "responsible_cd": cd.pk,
+                "document": docx,
+            },
+        )
+        assert response.status_code == 302
+        ec = EC.objects.get()
+        version = DocumentVersion.objects.get(ec=ec)
+        assert version.version_number == "v1.0"
+        assert version.uploaded_by == requester
+        assert version.ec == ec
+
+    def test_exe_upload_is_rejected(self, client):
+        cd = UserFactory(role=User.Role.CD)
+        release = ReleaseFactory()
+        self._login_requester(client)
+
+        virus = SimpleUploadedFile(
+            "test.exe", b"dummy content", content_type="application/x-msdownload"
+        )
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "CR2026042",
+                "description": "Trocar o resistor R12",
+                "release": release.pk,
+                "responsible_cd": cd.pk,
+                "document": virus,
+            },
+        )
+        assert response.status_code == 200  # re render orm with error
+        assert "document" in response.context["form"].errors
+        assert DocumentVersion.objects.count() == 0
+        assert EC.objects.count() == 0
