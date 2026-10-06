@@ -199,7 +199,7 @@ pytest-django + factory-boy, written **before** the code per
 `test_services.py` (a service is not a view); form behaviour lives in
 `TestNewECForm` in `test_views.py`.
 
-Status key: ⏳ pending · ✅ green. Tests 1–18 and 20 are green on branch `feat/ec-create-form` (2026-10-06); only the N+1 test 19 remains pending.
+Status key: ⏳ pending · ✅ green. All 20 tests are green on branch `feat/ec-create-form` (2026-10-06).
 
 **`test_services.py`**
 
@@ -235,7 +235,7 @@ Status key: ⏳ pending · ✅ green. Tests 1–18 and 20 are green on branch `f
 16. ✅ An `.exe` upload → rejected, no `DocumentVersion` (the validators are on the model).
 17. ✅ POST targeting a full release → refused from the HTTP side, no EC (test 5's twin).
 18. ✅ Two consecutive POSTs → `2026-001`, then `2026-002`.
-19. ⏳ **No N+1 in the dropdown:** query count constant as the release count grows — this is
+19. ✅ **No N+1 in the dropdown:** query count constant as the release count grows — this is
     the test that fails if `open_releases_with_ec_count()` is replaced with the raw loop.
 20. ✅ Closed and full releases are absent from `form.fields["release"].queryset`.
 
