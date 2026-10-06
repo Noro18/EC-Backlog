@@ -1,5 +1,8 @@
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import DetailView, TemplateView
 from django_tables2 import RequestConfig, SingleTableView
+
+from apps.accounts.models import User
 
 from .models import EC, Release
 from .selectors import release_with_ec_count
@@ -21,17 +24,16 @@ class ReleaseListView(SingleTableView):
         return release_with_ec_count()
 
 
-class NewECView(TemplateView):
+class NewECView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = "backlog/ec_form.html"
+
+    def test_func(self):
+        return self.request.user.role in [User.Role.REQUESTER, User.Role.ADMINISTRATOR]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from apps.accounts.models import User
-
-        from .models import Release
-
         context["releases"] = Release.objects.all()
-        context["reviewers"] = User.objects.filter(role="cd")
+        context["reviewers"] = User.objects.filter(role=User.Role.CD)
         return context
 
 
