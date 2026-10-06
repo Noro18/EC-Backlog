@@ -25,7 +25,7 @@ def create_ec(
     with transaction.atomic():
         fresh = Release.objects.select_for_update().get(pk=release.pk)
         if fresh.ec_count >= fresh.capacity or not fresh.is_open:
-            raise ValidationError("Release EC limit reached")
+            raise ValidationError("Release EC limit reached or release is closed.")
         ec = EC.objects.create(
             year=timezone.localdate().year,
             number_sequence=next_ec_number(timezone.localdate().year),
