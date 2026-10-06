@@ -94,6 +94,12 @@ workflow → documents → backlog → accounts
 An arrow means "may import from". Each app may import only from apps to its right. `core` may be imported by anyone and imports from no app.
 
 - Never import upward. `backlog` must not import from `documents` or `workflow`; `documents` must not import from `workflow`; `accounts` imports from no other app.
+- **Documented exception (EC_CREATE.md Decision 2, agreed 2026-10-05):** the single call site
+  `NewECView.form_valid` in `backlog/views.py` may import `create_first_version` from
+  `apps.documents.services`, because RF06 uploads the first document at EC creation time.
+  No other `backlog` module may import from `documents` — in particular `backlog/forms.py`
+  must not import `documents/validators.py`; file validation belongs in the `documents`
+  service. Widening this exception requires a new entry here.
 - If you feel a need to import upward, stop. Either move the logic up into the higher app, or move the shared piece down. If neither fits, ask the user.
 - Reference models in other apps by string (`"backlog.EC"`) in `ForeignKey` fields where it avoids an import.
 - Reading data from below is fine (`ec.versions.all()` through reverse relations).
@@ -150,4 +156,5 @@ An arrow means "may import from". Each app may import only from apps to its righ
 - `DEBUG = False`, a long random `SECRET_KEY`, and `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` set to the server address in production.
 - Run `uv run python manage.py check --deploy` and address every warning, or record why it is accepted.
 - Uploaded documents are validated (type and size) and stored outside the code tree on a persistent volume.
+- Uploaded files are served under `/media/` by the web server in production (nginx: `location /media/ { alias <MEDIA_ROOT>/; }`); Django only registers this route when `DEBUG = True` (`django.conf.urls.static.static` in `config/urls.py`).
 - Backups are stored on a different machine, and a restore has been tested at least once. On SQLite this is the whole production database in one file: back it up with the `.backup` command, never `cp` while the server is writing.

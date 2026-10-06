@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, F
 from django.db.models.functions import TruncMonth
 
 from apps.backlog.models import EC, Release
@@ -7,6 +7,16 @@ from apps.backlog.models import EC, Release
 def release_with_ec_count():
     """Return a queryset of releases annotated with the number of ECs."""
     return Release.objects.annotate(ec_total=Count("ecs")).order_by("-year", "-number_sequence")
+
+
+def open_releases_with_ec_count():
+    """Open releases with a free seat, annotated — one query, no N+1 in the dropdown."""
+    return (
+        Release.objects.filter(is_open=True)
+        .annotate(ec_total=Count("ecs"))
+        .filter(ec_total__lt=F("capacity"))
+        .order_by("-year", "-number_sequence")
+    )
 
 
 def dashboard_stats(user) -> dict:
@@ -43,8 +53,7 @@ def dashboard_stats(user) -> dict:
         "releases": releases,
         "releases_open": release_qs.filter(is_open=True).count(),
         "ec_by_month": [
-            {"month": row["month"].strftime("%Y-%m"), "count": row["n"]}
-            for row in monthly_rows
+            {"month": row["month"].strftime("%Y-%m"), "count": row["n"]} for row in monthly_rows
         ],
     }
 
@@ -101,11 +110,7 @@ def requester_dashboard(user) -> dict:
         if row["versions__id"] is not None:
             bucket["versions"].append(row)
 
-    by_status = {
-        value: 0
-        for value, _label in EC.Status.choices
-        if value != EC.Status.CANCELLED
-    }
+    by_status = {value: 0 for value, _label in EC.Status.choices if value != EC.Status.CANCELLED}
     needs_action = []
     versions_per_document = []
     total_versions = 0

@@ -30,7 +30,7 @@
             </ul>
             {% endif %}
 
-            {% if user.role == 'requester' %}
+            {% if user.role == 'requester' or user.role == 'administrator' %}
             <p class="nav-section">Solicitações</p>
             <ul class="nav flex-column mb-4">
                 <li class="nav-item"><a href="{% url "backlog:ec_form" %}" class="nav-link"><i class="bi bi-plus-circle"></i> Nova Solicitação</a></li>
@@ -74,6 +74,14 @@
         </aside>
 
         <main class="flex-grow-1 p-4">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
             {% block content %}{% endblock %}
         </main>
     </div>

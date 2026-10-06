@@ -5,7 +5,11 @@
 
         <div class="nav-item text-nowrap d-flex align-items-center gap-2">
 
-            <span class="text-white fw-semiboldf fs-5 me-3">{{user.role}}-{{user.username}}</span>
+            {% if user.is_authenticated %}
+            <span class="text-white fw-semibold fs-5 me-3">{{ user.get_role_display }} · {{ user.username }}</span>
+            {% else %}
+            <span class="text-white fw-semibold fs-5 me-3">Convidado</span>
+            {% endif %}
             
             <a href="#" class="text-white text-decoration-none d-flex align-items-center" title="perfil">
                 <i class="bi bi-person-circle text-white fs-5"></i>

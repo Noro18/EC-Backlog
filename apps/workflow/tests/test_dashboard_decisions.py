@@ -62,9 +62,7 @@ class TestRequesterDecisions:
         assert stats["by_status"]["in_validation"] == 1
         assert stats["by_status"]["rejected"] == 0
         assert stats["needs_action"] == []
-        assert stats["versions_per_document"] == [
-            {"reference": ec.reference, "versions": 2}
-        ]
+        assert stats["versions_per_document"] == [{"reference": ec.reference, "versions": 2}]
 
     def test_recent_uploads_carry_the_decision_for_the_badge(self):
         """The template renders a badge from `decision`; None means "waiting"."""
