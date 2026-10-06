@@ -1,12 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, TemplateView
 from django_tables2 import RequestConfig, SingleTableView
 
 from apps.accounts.models import User
+from apps.documents.services import create_first_version  # documented exception, ARCHITECTURE.md §5
 
 from .forms import ECCreateForm
 from .models import EC, Release
@@ -39,16 +41,23 @@ class NewECView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         return self.request.user.role in [User.Role.REQUESTER, User.Role.ADMINISTRATOR]
 
     def form_valid(self, form):
+        failed_on = "release"
         try:
-            ec = create_ec(
-                requester=self.request.user,
-                reference=form.cleaned_data["reference"],
-                description=form.cleaned_data["description"],
-                release=form.cleaned_data["release"],
-                responsible_cd=form.cleaned_data["responsible_cd"],
-            )
+            with transaction.atomic():
+                ec = create_ec(
+                    requester=self.request.user,
+                    reference=form.cleaned_data["reference"],
+                    description=form.cleaned_data["description"],
+                    release=form.cleaned_data["release"],
+                    responsible_cd=form.cleaned_data["responsible_cd"],
+                )
+                if file := self.request.FILES.get("document"):
+                    failed_on = "document"
+                    create_first_version(ec=ec, uploaded_by=self.request.user, file=file)
         except ValidationError as error:
-            form.add_error("release", error)
+            # full_clean() raises a message_dict ({"file": [...]}) — flatten it so
+            # the message can attach to OUR field name (document vs release).
+            form.add_error(failed_on, error.messages)
             return self.form_invalid(form)
         messages.success(self.request, f"EC {ec.ec_code} criada com sucesso.")
         # NOT super().form_valid(form): that would call form.save() and mint a

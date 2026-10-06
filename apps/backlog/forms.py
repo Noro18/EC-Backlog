@@ -50,3 +50,13 @@ class ECCreateForm(forms.ModelForm):
         empty_label=None,
         widget=forms.Select(attrs={"class": "form-select"}),
     )
+
+    # Not an EC model field — the file becomes a DocumentVersion row, written by
+    # documents.services.create_first_version (RF06). Optional (Assumption 6).
+    # NO validators from apps.documents here: ARCHITECTURE.md forbids backlog.forms
+    # importing documents — extension/size checks run inside the documents service.
+    document = forms.FileField(
+        label="Carregar Documento (.docx / .pdf)",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"class": "form-control", "accept": ".docx,.pdf"}),
+    )
