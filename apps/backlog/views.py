@@ -12,9 +12,22 @@ from apps.documents.services import create_first_version  # documented exception
 
 from .forms import ECCreateForm
 from .models import EC, Release
-from .selectors import release_with_ec_count
+from .selectors import dashboard_stats, release_with_ec_count, requester_dashboard
 from .services import create_ec
 from .tables import RELEASE_BADGE_CLASSES, ECTable, ReleaseTable
+
+
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "backlog/dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["stats"] = dashboard_stats(self.request.user)
+        # Only the requester pays for this extra query; the other roles never
+        # read `req`, so we skip it entirely rather than render an empty dict.
+        if self.request.user.role == "requester":
+            context["req"] = requester_dashboard(self.request.user)
+        return context
 
 
 class ECListView(SingleTableView):
