@@ -1,7 +1,10 @@
 import pytest
+from django.utils import timezone
 
-from apps.backlog.services import next_ec_number
-from apps.backlog.tests.factories import ECFactory, ReleaseFactory
+from apps.accounts.models import User
+from apps.backlog.models import EC
+from apps.backlog.services import create_ec, next_ec_number
+from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -13,11 +16,10 @@ class TestNextEcNumber:
         assert next_ec_number(2026) == 1
 
     def test_gaps_are_never_reused(self):
-        release = ReleaseFactory(year=2026, number_sequence=1)
-        ECFactory(release=release, number_sequence=1)
-        ECFactory(release=release, number_sequence=2)
-        ECFactory(release=release, number_sequence=3)
-        ECFactory(release=release, number_sequence=6)
+        ECFactory(year=2026, number_sequence=1)
+        ECFactory(year=2026, number_sequence=2)
+        ECFactory(year=2026, number_sequence=3)
+        ECFactory(year=2026, number_sequence=6)
 
         assert next_ec_number(2026) == 7
 
@@ -30,3 +32,32 @@ class TestNextEcNumber:
 
         assert next_ec_number(2026) == 2
         assert next_ec_number(2027) == 5
+
+
+class TestCreateEc:
+    """EC_CREATE.md test 3: identity fields set by the service, status left at default."""
+
+    def test_create_ec_sets_identity_and_leaves_status_alone(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        release = ReleaseFactory(year=2026, number_sequence=1)
+
+        ec = create_ec(
+            requester=requester,
+            reference="CR-2026-001",
+            description="Test EC description",
+            release=release,
+            responsible_cd=cd,
+        )
+
+        assert ec.requester is requester
+        assert ec.reference == "CR-2026-001"
+        assert ec.description == "Test EC description"
+        assert ec.release == release
+        assert ec.responsible_cd is cd
+        assert ec.year == timezone.localdate().year
+        assert ec.number_sequence == 1
+        assert ec.ec_code == f"{ec.year}-{ec.number_sequence:03d}"
+        assert ec.creation_date == timezone.localdate()
+        assert ec.status == EC.Status.IN_VALIDATION
+        assert ec.is_imported is False
