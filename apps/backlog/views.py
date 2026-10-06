@@ -1,11 +1,17 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.views.generic import DetailView, TemplateView
+from django.core.exceptions import ValidationError
+from django.http import HttpResponseRedirect
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DetailView, TemplateView
 from django_tables2 import RequestConfig, SingleTableView
 
 from apps.accounts.models import User
 
+from .forms import ECCreateForm
 from .models import EC, Release
 from .selectors import release_with_ec_count
+from .services import create_ec
 from .tables import RELEASE_BADGE_CLASSES, ECTable, ReleaseTable
 
 
@@ -24,17 +30,30 @@ class ReleaseListView(SingleTableView):
         return release_with_ec_count()
 
 
-class NewECView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+class NewECView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    form_class = ECCreateForm
     template_name = "backlog/ec_form.html"
+    success_url = reverse_lazy("backlog:ec_list")
 
     def test_func(self):
         return self.request.user.role in [User.Role.REQUESTER, User.Role.ADMINISTRATOR]
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["releases"] = Release.objects.all()
-        context["reviewers"] = User.objects.filter(role=User.Role.CD)
-        return context
+    def form_valid(self, form):
+        try:
+            ec = create_ec(
+                requester=self.request.user,
+                reference=form.cleaned_data["reference"],
+                description=form.cleaned_data["description"],
+                release=form.cleaned_data["release"],
+                responsible_cd=form.cleaned_data["responsible_cd"],
+            )
+        except ValidationError as error:
+            form.add_error("release", error)
+            return self.form_invalid(form)
+        messages.success(self.request, f"EC {ec.ec_code} criada com sucesso.")
+        # NOT super().form_valid(form): that would call form.save() and mint a
+        # second, serviceless EC row (the spec sketch's shortcut is a double-save).
+        return HttpResponseRedirect(self.success_url)
 
 
 class ECDetailView(TemplateView):
