@@ -156,4 +156,5 @@ An arrow means "may import from". Each app may import only from apps to its righ
 - `DEBUG = False`, a long random `SECRET_KEY`, and `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` set to the server address in production.
 - Run `uv run python manage.py check --deploy` and address every warning, or record why it is accepted.
 - Uploaded documents are validated (type and size) and stored outside the code tree on a persistent volume.
+- Uploaded files are served under `/media/` by the web server in production (nginx: `location /media/ { alias <MEDIA_ROOT>/; }`); Django only registers this route when `DEBUG = True` (`django.conf.urls.static.static` in `config/urls.py`).
 - Backups are stored on a different machine, and a restore has been tested at least once. On SQLite this is the whole production database in one file: back it up with the `.backup` command, never `cp` while the server is writing.
