@@ -199,7 +199,7 @@ pytest-django + factory-boy, written **before** the code per
 `test_services.py` (a service is not a view); form behaviour lives in
 `TestNewECForm` in `test_views.py`.
 
-Status key: ⏳ pending · ✅ green. Tests 1–6 (services) and 7–9 + 11 (role gate) are green on branch `feat/ec-create-form` (2026-10-06); test 10 and the form tests 12–20 are still pending.
+Status key: ⏳ pending · ✅ green. Tests 1–13, 15, 17, 18, 20 are green on branch `feat/ec-create-form` (2026-10-06); only the upload tests 14 + 16 (M6) and the N+1 test 19 (M7) remain pending.
 
 **`test_services.py`**
 
@@ -211,8 +211,8 @@ Status key: ⏳ pending · ✅ green. Tests 1–6 (services) and 7–9 + 11 (rol
    capacity test — SQLite cannot test the concurrent variant).
 5. ✅ Capacity is re-checked **inside** the service: a caller that skipped the form's
    `disabled` option still cannot exceed capacity.
-6. ✅ A closed release (`is_open=False`) refuses new ECs. _(message copy pending: one
-   shared vs. one per reason)_
+6. ✅ A closed release (`is_open=False`) refuses new ECs. _(agreed: one shared message,
+   true for both reasons — "Release EC limit reached or release is closed.")_
 
 **Role gate — `test_views.py`**
 
@@ -220,24 +220,24 @@ Status key: ⏳ pending · ✅ green. Tests 1–6 (services) and 7–9 + 11 (rol
 8. ✅ A **CD** `GET` → **403** (and the same for a DES user).
 9. ✅ A **CD** `POST` of an otherwise valid form → **403** with **no** EC created — the test
    that proves the sidebar `{% if %}` is not the permission check.
-10. ⏳ An **administrator** `GET` → 200, and a `POST` → EC created (grant is symmetric).
+10. ✅ An **administrator** `GET` → 200, and a `POST` → EC created (grant is symmetric).
 11. ✅ The sidebar renders "Nova Solicitação" for `requester` and `administrator` and hides it
     from CD.
 
 **`test_views.py::TestNewECForm`**
 
-12. ⏳ `GET /backlog/new_ec/` while logged in as a requester → 200, `form` in the context.
-13. ⏳ Valid POST → an EC exists with `ec_code` `2026-001`, `requester` = the logged-in user,
+12. ✅ `GET /backlog/new_ec/` while logged in as a requester → 200, `form` in the context.
+13. ✅ Valid POST → an EC exists with `ec_code` `2026-001`, `requester` = the logged-in user,
     `creation_date` = today; redirect to `ec_list`; the success message is **rendered**.
 14. ⏳ Valid POST with a file → a `DocumentVersion` `v1.0` exists for that EC, with
     `uploaded_by` set (the first caller of the documented exception).
-15. ⏳ Blank `description` → 200, a form error, and **no** EC created.
+15. ✅ Blank `description` → 200, a form error, and **no** EC created.
 16. ⏳ An `.exe` upload → rejected, no `DocumentVersion` (the validators are on the model).
-17. ⏳ POST targeting a full release → refused from the HTTP side, no EC (test 5's twin).
-18. ⏳ Two consecutive POSTs → `2026-001`, then `2026-002`.
+17. ✅ POST targeting a full release → refused from the HTTP side, no EC (test 5's twin).
+18. ✅ Two consecutive POSTs → `2026-001`, then `2026-002`.
 19. ⏳ **No N+1 in the dropdown:** query count constant as the release count grows — this is
     the test that fails if `open_releases_with_ec_count()` is replaced with the raw loop.
-20. ⏳ Closed and full releases are absent from `form.fields["release"].queryset`.
+20. ✅ Closed and full releases are absent from `form.fields["release"].queryset`.
 
 ## Boundaries
 
