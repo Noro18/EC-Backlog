@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+
+<h3 class="mb-1">Dashboard</h3>
+<p class="text-muted mb-4">Visão geral e acompanhamento de solicitações (Requester).</p>
+
+{% if user.role == 'requester' %}
+
+    {# --- KPI Cards --- #}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Meus ECs</div>
+                    <div class="fs-2 fw-semibold">{{ req.ec_total }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Em Validação</div>
+                    <div class="fs-2 fw-semibold">{{ req.by_status.in_validation }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Rejeitados</div>
+                    <div class="fs-2 fw-semibold {% if req.by_status.rejected %}text-danger{% endif %}">
+                        {{ req.by_status.rejected }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Versões carregadas</div>
+                    <div class="fs-2 fw-semibold">{{ req.versions_total }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# --- Charts --- #}
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">
+                    Documentos por estado
+                </div>
+                <div class="card-body pt-2 pb-3">
+                    <canvas id="reqChartStatus"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">
+                    Versões por documento
+                </div>
+                <div class="card-body pt-2 pb-3">
+                    <canvas id="reqChartVersions"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# --- Rejections needing action --- #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6 text-danger">
+            Rejeitados — precisam da sua ação
+        </div>
+        <ul class="list-group list-group-flush">
+            {% for item in req.needs_action %}
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'backlog:ec_detail' item.id %}" class="fw-semibold text-decoration-none">
+                        {{ item.reference }}
+                    </a>
+                    <small class="text-muted">
+                        v{{ item.version }} · {{ item.cd }} · {{ item.decided_at|date:"d/m/Y H:i" }}
+                    </small>
+                </div>
+                <div class="text-muted small mt-1">{{ item.comment|default:"Sem comentário." }}</div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">Nada rejeitado — nada pendente da sua parte.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {# --- Recent uploads --- #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">Últimos documentos</div>
+        <ul class="list-group list-group-flush">
+            {% for item in req.recent_versions %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ item.reference }} <small class="text-muted">v{{ item.version }}</small></span>
+                <span>
+                    {% if item.decision == "approved" %}
+                    <span class="badge text-bg-success">Aprovado</span>
+                    {% elif item.decision == "rejected" %}
+                    <span class="badge text-bg-danger">Rejeitado</span>
+                    {% elif item.decision %}
+                    <span class="badge text-bg-secondary">{{ item.decision }}</span>
+                    {% else %}
+                    <span class="badge text-bg-warning">A aguardar CD</span>
+                    {% endif %}
+                </span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">Ainda não enviou documentos.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {{ req.by_status|json_script:"req-status" }}
+    {{ req.versions_per_document|json_script:"req-versions" }}
+
+{% else %}
+    {% if user.role == 'cd' %}
+    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-tools fs-1 d-block mb-2"></i>
+            <div class="fw-semibold">Widgets específicos do CD — em construção</div>
+        </div>
+    </div>
+    {% elif user.role == 'des_team' %}
+    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-tools fs-1 d-block mb-2"></i>
+            <div class="fw-semibold">Widgets específicos do DES Team — em construção</div>
+        </div>
+    </div>
+    {% elif user.role == 'administrator' %}
+    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-tools fs-1 d-block mb-2"></i>
+            <div class="fw-semibold">Widgets específicos do Administrador — em construção</div>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if user.role == 'requester' %}
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+<script>
+  const MUTED = "#667085";
+  const PALETTE = { in_validation: "#5b8def" };
+  const barStyle = { borderRadius: 5, borderSkipped: false, maxBarThickness: 22 };
+
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = MUTED;
+  Chart.defaults.plugins.tooltip.backgroundColor = "#101828";
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 6;
+
+  const legend = (pointStyle) => ({
+    position: "bottom",
+    labels: { usePointStyle: true, pointStyle: pointStyle, boxWidth: 7, boxHeight: 7, padding: 14 }
+  });
+
+  const DOC_PT = {
+    in_validation: "Em validação",
+    approved: "Aprovada",
+    rejected: "Rejeitada",
+    sent_to_des: "Enviada para DES",
+    closed: "Fechada"
+  };
+  const DOC_COLOR = {
+    in_validation: "#5b8def",
+    approved:      "#2fb344",
+    rejected:      "#f04438",
+    sent_to_des:   "#f79009",
+    closed:        "#667085"
+  };
+
+  const docStatusEl = document.getElementById("req-status");
+  if (docStatusEl) {
+    const docStatus = JSON.parse(docStatusEl.textContent);
+    new Chart(document.getElementById("reqChartStatus"), {
+      type: "doughnut",
+      data: {
+        labels: Object.keys(docStatus).map(key => DOC_PT[key] || key),
+        datasets: [{
+          data: Object.values(docStatus),
+          backgroundColor: Object.keys(docStatus).map(key => DOC_COLOR[key] || "#cbd5e1"),
+          borderColor: "#fff",
+          borderWidth: 2,
+          hoverOffset: 8
+        }]
+      },
+      options: { cutout: "66%", aspectRatio: 1.6, plugins: { legend: legend("circle") } }
+    });
+  }
+
+  const docVersionsEl = document.getElementById("req-versions");
+  if (docVersionsEl) {
+    const docVersions = JSON.parse(docVersionsEl.textContent);
+    new Chart(document.getElementById("reqChartVersions"), {
+      type: "bar",
+      data: {
+        labels: docVersions.map(row => row.reference),
+        datasets: [{
+          label: "Versões",
+          data: docVersions.map(row => row.versions),
+          backgroundColor: PALETTE.in_validation,
+          ...barStyle
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        aspectRatio: 2,
+        scales: {
+          x: {
+            beginAtZero: true, border: { display: false }, grid: { color: "rgba(16, 24, 40, .07)" },
+            ticks: { precision: 0, color: MUTED }
+          },
+          y: { border: { display: false }, grid: { display: false }, ticks: { color: MUTED } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+</script>
+{% endif %}
+{% endblock %}
