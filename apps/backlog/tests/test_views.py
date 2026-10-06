@@ -376,6 +376,26 @@ class TestNewECForm:
         assert full not in queryset
         assert closed not in queryset
 
+    def test_dropdown_query_count_does_not_grow_with_releases(self, client):
+        """Spec test 19: constant queries as releases grow — kills a raw-loop N+1.
+
+        Fails if open_releases_with_ec_count() is swapped for per-option counting.
+        """
+        self._login_requester(client)
+        client.get(reverse("backlog:ec_form"))  # warm-up: session/auth queries paid once
+
+        for _ in range(3):
+            ReleaseFactory()
+        with CaptureQueriesContext(connection) as small:
+            client.get(reverse("backlog:ec_form"))
+
+        for _ in range(7):
+            ReleaseFactory()
+        with CaptureQueriesContext(connection) as large:
+            client.get(reverse("backlog:ec_form"))
+
+        assert len(large) == len(small)
+
     def test_upload_creates_first_document_version(self, client):
         requester = UserFactory(role=User.Role.REQUESTER)
         cd = UserFactory(role=User.Role.CD)
