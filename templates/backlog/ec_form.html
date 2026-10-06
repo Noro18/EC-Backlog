@@ -16,46 +16,33 @@
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="mb-3">
-          <label class="form-label">Referência (CR / RT / COR) <span class="text-danger">*</span></label>
+          <label class="form-label" for="{{ form.reference.id_for_label }}">Referência (CR / RT / COR) <span class="text-danger">*</span></label>
           <div class="input-group">
             <span class="input-group-text bg-white"><i class="bi bi-hash"></i></span>
-            <input type="text" name="reference" class="form-control" placeholder="ex.: CR2026042" required>
+            {{ form.reference }}
           </div>
+          {% for error in form.reference.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
         </div>
         <div class="mb-3">
-          <label class="form-label">Descrição da Alteração <span class="text-danger">*</span></label>
-          <textarea name="description" class="form-control" rows="4" placeholder="Descreva a alteração técnica com clareza..." required></textarea>
+          <label class="form-label" for="{{ form.description.id_for_label }}">Descrição da Alteração <span class="text-danger">*</span></label>
+          {{ form.description }}
+          {% for error in form.description.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
         </div>
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label">Selecionar Release <span class="text-danger">*</span></label>
-            <select name="release" class="form-select" required>
-              {% for r in releases %}
-                {% if r.is_full %}
-                <option value="{{ r.id }}" disabled>{{ r.release_code }} — Lotado ({{ r.ecs.count }}/{{ r.capacity }})</option>
-                {% else %}
-                <option value="{{ r.id }}">{{ r.release_code }} (aberta — {{ r.ecs.count }}/{{ r.capacity }})</option>
-                {% endif %}
-              {% empty %}
-                <option value="" disabled>Não há releases abertas</option>
-              {% endfor %}
-            </select>
+            <label class="form-label" for="{{ form.release.id_for_label }}">Selecionar Release <span class="text-danger">*</span></label>
+            {{ form.release }}
+            {% for error in form.release.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
           </div>
           <div class="col-md-6">
-            <label class="form-label">Atribuir a CD <span class="text-danger">*</span></label>
-            <select name="responsible_cd" class="form-select" required>
-              {% for r in reviewers %}
-                <option value="{{ r.id }}">{{ r.get_full_name|default:r.username }} ({{ r.username }})</option>
-              {% empty %}
-                <option value="" disabled>Não há CDs disponíveis</option>
-              {% endfor %}
-            </select>
+            <label class="form-label" for="{{ form.responsible_cd.id_for_label }}">Atribuir a CD <span class="text-danger">*</span></label>
+            {{ form.responsible_cd }}
+            {% for error in form.responsible_cd.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
           </div>
         </div>
-        <div class="mb-3 mt-3">
-          <label class="form-label">Carregar Documento (.docx / .pdf)</label>
-          <input type="file" name="document" class="form-control" accept=".docx,.pdf">
-        </div>
+        {% if form.non_field_errors %}
+          <div class="text-danger small mt-3">{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>
+        {% endif %}
         <div class="d-flex gap-2 mt-4">
           <button type="submit" class="btn btn-dark"><i class="bi bi-send me-1"></i> Criar EC</button>
           <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary">Cancelar</a>
