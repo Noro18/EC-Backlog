@@ -1,6 +1,6 @@
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 
 from apps.backlog.models import EC, Release
 
@@ -24,7 +24,7 @@ def create_ec(
     """Create a new EC with the given parameters and return it."""
     with transaction.atomic():
         fresh = Release.objects.select_for_update().get(pk=release.pk)
-        if fresh.ec_count >= fresh.capacity:
+        if fresh.ec_count >= fresh.capacity or not fresh.is_open:
             raise ValidationError("Release EC limit reached")
         ec = EC.objects.create(
             year=timezone.localdate().year,
