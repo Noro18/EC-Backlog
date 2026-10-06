@@ -12,8 +12,9 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from apps.backlog.models import Release
-from apps.backlog.tests.factories import ECFactory, ReleaseFactory
+from apps.accounts.models import User
+from apps.backlog.models import EC, Release
+from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 
 pytestmark = pytest.mark.django_db  # marka wainihra test ida access o sentuh database ka lae
 
@@ -197,3 +198,44 @@ class TestReleaseDetail:
         assert "05/10/2026 09:30" in html
         assert "Não definido" not in html
         assert "—" in html
+
+
+class TestNewECRoleGate:
+    """EC_CREATE.md tests 7-9, 11: hiding the link is not the permission check."""
+
+    def test_anonymous_user_get_redirected_to_login(self, client):
+        response = client.get(reverse("backlog:ec_form"))
+
+        assert response.status_code == 302
+        assert reverse("accounts:login") in response.url
+
+    @pytest.mark.parametrize("role", [User.Role.CD, User.Role.DES_TEAM])
+    def test_cd_get_forbidden(self, client, role):
+        cd_user = UserFactory(role=role)
+        client.force_login(cd_user)
+        response = client.get(reverse("backlog:ec_form"))
+
+        assert response.status_code == 403
+
+    def test_cd_post_forbidden(self, client):
+        cd_user = UserFactory(role=User.Role.CD)
+        client.force_login(cd_user)
+        response = client.post(reverse("backlog:ec_form"), data={})
+
+        assert response.status_code == 403
+        assert EC.objects.count() == 0
+
+    def test_sidebar_shows_link_for_requester_admin_not_cd(self, client):
+        requester_user = UserFactory(role=User.Role.REQUESTER)
+        admin_user = UserFactory(role=User.Role.ADMINISTRATOR)
+        client.force_login(requester_user)
+        response_requester = client.get(reverse("backlog:release_list"))
+        assert reverse("backlog:ec_form") in response_requester.content.decode()
+
+        client.force_login(admin_user)
+        response_admin = client.get(reverse("backlog:release_list"))
+        assert reverse("backlog:ec_form") in response_admin.content.decode()
+
+        client.force_login(UserFactory(role=User.Role.CD))
+        response_cd = client.get(reverse("backlog:release_list"))
+        assert reverse("backlog:ec_form") not in response_cd.content.decode()
