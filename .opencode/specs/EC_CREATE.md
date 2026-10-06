@@ -199,19 +199,20 @@ pytest-django + factory-boy, written **before** the code per
 `test_services.py` (a service is not a view); form behaviour lives in
 `TestNewECForm` in `test_views.py`.
 
-Status key: ⏳ all pending — this spec is not yet approved.
+Status key: ⏳ pending · ✅ green. Tests 1–6 (services) are green on branch `feat/ec-create-form` (2026-10-06); the role gate and form tests are still pending.
 
 **`test_services.py`**
 
-1. ⏳ `next_ec_number()` on an empty year returns `1`.
-2. ⏳ Existing sequences `1, 2, 3, 6` → next is **`7`** (the gap is skipped, never reused).
-3. ⏳ `create_ec()` sets `requester`, `year`, `number_sequence` and `creation_date`, and
+1. ✅ `next_ec_number()` on an empty year returns `1`.
+2. ✅ Existing sequences `1, 2, 3, 6` → next is **`7`** (the gap is skipped, never reused).
+3. ✅ `create_ec()` sets `requester`, `year`, `number_sequence` and `creation_date`, and
    leaves `status`/`is_imported` at their model defaults.
-4. ⏳ Against a capacity-10 release, the **11th** EC is refused (ARCHITECTURE's sequential
+4. ✅ Against a capacity-10 release, the **11th** EC is refused (ARCHITECTURE's sequential
    capacity test — SQLite cannot test the concurrent variant).
-5. ⏳ Capacity is re-checked **inside** the service: a caller that skipped the form's
+5. ✅ Capacity is re-checked **inside** the service: a caller that skipped the form's
    `disabled` option still cannot exceed capacity.
-6. ⏳ A closed release (`is_open=False`) refuses new ECs.
+6. ✅ A closed release (`is_open=False`) refuses new ECs. _(message copy pending: one
+   shared vs. one per reason)_
 
 **Role gate — `test_views.py`**
 
