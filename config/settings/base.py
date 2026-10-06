@@ -154,5 +154,5 @@ Q_CLUSTER = {
 }
 
 LOGIN_URL = "accounts:login"
-LOGIN_REDIRECT_URL = "backlog:ec_list"
+LOGIN_REDIRECT_URL = "backlog:dashboard"
 LOGOUT_REDIRECT_URL = "accounts:login"
