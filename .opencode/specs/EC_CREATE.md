@@ -199,7 +199,7 @@ pytest-django + factory-boy, written **before** the code per
 `test_services.py` (a service is not a view); form behaviour lives in
 `TestNewECForm` in `test_views.py`.
 
-Status key: ⏳ pending · ✅ green. Tests 1–13, 15, 17, 18, 20 are green on branch `feat/ec-create-form` (2026-10-06); only the upload tests 14 + 16 (M6) and the N+1 test 19 (M7) remain pending.
+Status key: ⏳ pending · ✅ green. Tests 1–18 and 20 are green on branch `feat/ec-create-form` (2026-10-06); only the N+1 test 19 remains pending.
 
 **`test_services.py`**
 
@@ -229,10 +229,10 @@ Status key: ⏳ pending · ✅ green. Tests 1–13, 15, 17, 18, 20 are green on 
 12. ✅ `GET /backlog/new_ec/` while logged in as a requester → 200, `form` in the context.
 13. ✅ Valid POST → an EC exists with `ec_code` `2026-001`, `requester` = the logged-in user,
     `creation_date` = today; redirect to `ec_list`; the success message is **rendered**.
-14. ⏳ Valid POST with a file → a `DocumentVersion` `v1.0` exists for that EC, with
+14. ✅ Valid POST with a file → a `DocumentVersion` `v1.0` exists for that EC, with
     `uploaded_by` set (the first caller of the documented exception).
 15. ✅ Blank `description` → 200, a form error, and **no** EC created.
-16. ⏳ An `.exe` upload → rejected, no `DocumentVersion` (the validators are on the model).
+16. ✅ An `.exe` upload → rejected, no `DocumentVersion` (the validators are on the model).
 17. ✅ POST targeting a full release → refused from the HTTP side, no EC (test 5's twin).
 18. ✅ Two consecutive POSTs → `2026-001`, then `2026-002`.
 19. ⏳ **No N+1 in the dropdown:** query count constant as the release count grows — this is
