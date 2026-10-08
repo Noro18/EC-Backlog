@@ -30,7 +30,7 @@
             </ul>
             {% endif %}
 
-            {% if user.role == 'requester' or user.role == 'administrator' %}
+            {% if user.role == 'requester'%}
             <p class="nav-section">Solicitações</p>
             <ul class="nav flex-column mb-4">
                 <li class="nav-item"><a href="{% url "backlog:ec_form" %}" class="nav-link"><i class="bi bi-plus-circle"></i> Nova Solicitação</a></li>
