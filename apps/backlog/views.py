@@ -12,9 +12,14 @@ from apps.documents.services import create_first_version  # documented exception
 
 from .forms import ECCreateForm
 from .models import EC, Release
-from .selectors import dashboard_stats, release_with_ec_count, requester_dashboard
+from .selectors import (
+    build_ec_timeline,
+    dashboard_stats,
+    release_with_ec_count,
+    requester_dashboard,
+)
 from .services import create_ec
-from .tables import RELEASE_BADGE_CLASSES, ECTable, ReleaseTable
+from .tables import EC_BADGE_CLASSES, RELEASE_BADGE_CLASSES, ECTable, ReleaseTable
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -78,8 +83,25 @@ class NewECView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         return HttpResponseRedirect(self.success_url)
 
 
-class ECDetailView(TemplateView):
+class ECDetailView(LoginRequiredMixin, DetailView):
+    model = EC
     template_name = "backlog/ec_detail.html"
+    context_object_name = "ec"
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("requester", "responsible_cd", "release")
+            .prefetch_related("versions__uploaded_by", "versions__review")
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        ec = self.object
+        context["status_badge_class"] = EC_BADGE_CLASSES.get(ec.status, "text-bg-secondary")
+        context["timeline"] = build_ec_timeline(ec)
+        return context
 
 
 class ReleaseDetailView(DetailView):

@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count, F
 from django.db.models.functions import TruncMonth
 
@@ -176,3 +177,56 @@ def _recent_uploads(rows, limit=5):
     ]
     uploads.sort(key=lambda item: item["uploaded_at"], reverse=True)
     return uploads[:limit]
+
+
+DECISION_LABELS = {
+    "approved": "Aprovado",
+    "rejected": "Rejeitado",
+}
+
+
+def _display_name(user):
+    if user is None:
+        return None
+    return user.full_name or user.username
+
+
+def build_ec_timeline(ec) -> list[dict]:
+    """Events (creation, version uploads, CD decisions) for one EC, oldest first.
+
+    Derived from the models only — EC_DETAIL Decision 3. Reviews are reached
+    through `version.review` (reverse one-to-one): `backlog` must not import
+    `workflow` (ARCHITECTURE §5).
+    """
+    events = [
+        {
+            "title": "EC criada",
+            "who": _display_name(ec.requester),
+            "when": ec.created_at,
+            "note": None,
+        }
+    ]
+    for version in ec.versions.all():
+        events.append(
+            {
+                "title": f"Documento {version.version_number} carregado",
+                "who": _display_name(version.uploaded_by),
+                "when": version.uploaded_at,
+                "note": version.change_reason or None,
+            }
+        )
+        try:
+            review = version.review
+        except ObjectDoesNotExist:
+            continue
+        decision_label = DECISION_LABELS.get(review.decision, review.get_decision_display())
+        events.append(
+            {
+                "title": f"Decisão do CD: {decision_label}",
+                "who": _display_name(review.cd),
+                "when": review.decided_at,
+                "note": review.comment or None,
+            }
+        )
+    events.sort(key=lambda event: event["when"])
+    return events
