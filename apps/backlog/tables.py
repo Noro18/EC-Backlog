@@ -66,7 +66,7 @@ class ECTable(tables.Table):
     ec_code = tables.TemplateColumn(
         verbose_name="EC",
         orderable=False,
-        template_code="""<span class="fw-semibold">EC-{{ record.ec_code }}</span>""",
+        template_code="""<a href="{% url 'backlog:ec_detail' record.id %}" class="fw-semibold text-decoration-none">EC-{{ record.ec_code }}</a>""",
     )
     reference = tables.Column(
         verbose_name="Referência",
@@ -97,18 +97,6 @@ class ECTable(tables.Table):
             {% endif %}
         """,
     )
-    action = tables.TemplateColumn(
-        verbose_name="Ações",
-        orderable=False,
-        empty_values=(),
-        template_code="""
-            <a href="{% url 'backlog:ec_detail' record.id %}"
-                class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-eye"></i> Ver
-            </a>
-        """,
-    )
-
     def render_status(self, record):
         badge_class = EC_BADGE_CLASSES.get(record.status, "text-bg-secondary")
         return format_html(
@@ -128,7 +116,6 @@ class ECTable(tables.Table):
             "creation_date",
             "status",
             "is_imported",
-            "action",
         )
         attrs = {"class": "table table-sm table-hover align-middle mb-0"}
         empty_text = "Nenhuma EC encontrada."
