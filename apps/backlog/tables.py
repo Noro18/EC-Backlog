@@ -66,7 +66,7 @@ class ECTable(tables.Table):
     ec_code = tables.TemplateColumn(
         verbose_name="EC",
         orderable=False,
-        template_code="""<span class="fw-semibold">{{ record.ec_code }}</span>""",
+        template_code="""<span class="fw-semibold">EC-{{ record.ec_code }}</span>""",
     )
     reference = tables.Column(
         verbose_name="Referência",
