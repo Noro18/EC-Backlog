@@ -230,3 +230,68 @@ def build_ec_timeline(ec) -> list[dict]:
         )
     events.sort(key=lambda event: event["when"])
     return events
+
+
+def cd_dashboard(user) -> dict:
+    """Simplified CD-centric dashboard stats and queues."""
+    ec_qs = EC.objects.filter(responsible_cd=user).exclude(status=EC.Status.CANCELLED)
+
+    # 1. Status breakdown for doughnut chart
+    status_counts = {row["status"]: row["n"] for row in ec_qs.values("status").annotate(n=Count("id"))}
+    by_status = {value: status_counts.get(value, 0) for value, _label in EC.Status.choices if value != EC.Status.CANCELLED}
+
+    # 2. Monthly creation for line/bar chart
+    ec_by_month = [
+        {"month": row["month"].strftime("%Y-%m"), "count": row["n"]}
+        for row in ec_qs.exclude(creation_date=None)
+            .annotate(month=TruncMonth("creation_date"))
+            .values("month")
+            .annotate(n=Count("id"))
+            .order_by("month")
+    ]
+
+    # 3. Queues (Pending review & Rejected by me)
+    pending_review = []
+    rejected_by_me = []
+    approved_by_me = []
+
+    for ec in ec_qs.prefetch_related("versions__review"):
+        latest = ec.versions.order_by("-id").first()
+        if not latest:
+            continue
+        
+        review = getattr(latest, "review", None)
+        if review is None:
+            pending_review.append({
+                "id": ec.id,
+                "reference": ec.reference,
+                "version": latest.version_number,
+                "uploaded_at": latest.uploaded_at,
+            })
+        elif review.decision == "approved" and review.cd_id == user.id:
+            approved_by_me.append({
+                "id": ec.id,
+                "reference": ec.reference,
+                "version": latest.version_number,
+                "comment": review.comment,
+                "decided_at": review.decided_at,
+        })
+        elif review.decision == "rejected" and review.cd_id == user.id:
+            rejected_by_me.append({
+                "id": ec.id,
+                "reference": ec.reference,
+                "version": latest.version_number,
+                "comment": review.comment,
+                "decided_at": review.decided_at,
+            })
+
+    return {
+        "assigned_total": ec_qs.count(),
+        "pending_total": len(pending_review),
+        "approved_total": by_status.get(EC.Status.APPROVED, 0),
+        "rejected_total": by_status.get(EC.Status.REJECTED, 0),
+        "pending_review": pending_review,
+        "rejected_by_me": rejected_by_me,
+        "ec_by_status": by_status,
+        "ec_by_month": ec_by_month,
+    }

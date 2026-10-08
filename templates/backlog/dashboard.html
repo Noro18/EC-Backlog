@@ -6,11 +6,11 @@
 {% block content %}
 
 <h3 class="mb-1">Dashboard</h3>
-<p class="text-muted mb-4">Visão geral e acompanhamento de solicitações (Requester).</p>
+<p class="text-muted mb-4">Visão geral e acompanhamento.</p>
 
 {% if user.role == 'requester' %}
 
-    {# --- KPI Cards --- #}
+    {# --- Requester KPI Cards --- #}
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
@@ -48,7 +48,7 @@
         </div>
     </div>
 
-    {# --- Charts --- #}
+    {# --- Requester Charts --- #}
     <div class="row g-3 mb-4">
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm h-100">
@@ -124,35 +124,95 @@
     {{ req.by_status|json_script:"req-status" }}
     {{ req.versions_per_document|json_script:"req-versions" }}
 
-{% else %}
-    {% if user.role == 'cd' %}
-    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
-        <div class="card-body text-center text-muted py-5">
-            <i class="bi bi-tools fs-1 d-block mb-2"></i>
-            <div class="fw-semibold">Widgets específicos do CD — em construção</div>
+{% elif user.role == 'cd' %}
+
+    {# --- CD KPI Cards --- #}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">ECs Atribuídos</div>
+                    <div class="fs-2 fw-semibold">{{ cd.assigned_total }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Pendentes de Revisão</div>
+                    <div class="fs-2 fw-semibold text-warning">{{ cd.pending_total }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Aprovados por si</div>
+                    <div class="fs-2 fw-semibold text-success">{{ cd.approved_total }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Rejeitados por si</div>
+                    <div class="fs-2 fw-semibold text-danger">{{ cd.rejected_total }}</div>
+                </div>
+            </div>
         </div>
     </div>
-    {% elif user.role == 'des_team' %}
-    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
-        <div class="card-body text-center text-muted py-5">
-            <i class="bi bi-tools fs-1 d-block mb-2"></i>
-            <div class="fw-semibold">Widgets específicos do DES Team — em construção</div>
+
+    {# --- ECs que precisam da sua revisão --- #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6 text-warning">
+            ECs que precisam da sua revisão
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Referência</th>
+                        <th>Versão</th>
+                        <th>Enviado em</th>
+                        <th class="text-end">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cd.pending_review %}
+                    <tr>
+                        <td class="fw-semibold">
+                            <a href="{% url 'backlog:ec_detail' item.id %}" class="text-decoration-none">
+                                {{ item.reference }}
+                            </a>
+                        </td>
+                        <td>{{ item.version }}</td>
+                        <td>{{ item.uploaded_at|date:"d/m/Y H:i" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'backlog:ec_detail' item.id %}" class="btn btn-sm btn-outline-warning">
+                                Revisar
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-muted text-center py-3">
+                            Nenhum EC pendente de revisão.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-    {% elif user.role == 'administrator' %}
-    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
-        <div class="card-body text-center text-muted py-5">
-            <i class="bi bi-tools fs-1 d-block mb-2"></i>
-            <div class="fw-semibold">Widgets específicos do Administrador — em construção</div>
-        </div>
-    </div>
-    {% endif %}
+
+    {{ cd.ec_by_status|json_script:"cd-status" }}
+    {{ cd.ec_by_month|json_script:"cd-month" }}
+
 {% endif %}
 
 {% endblock %}
 
 {% block extra_js %}
-{% if user.role == 'requester' %}
 <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
 <script>
   const MUTED = "#667085";
@@ -170,31 +230,49 @@
     labels: { usePointStyle: true, pointStyle: pointStyle, boxWidth: 7, boxHeight: 7, padding: 14 }
   });
 
-  const DOC_PT = {
+  const axis = {
+    y: {
+      beginAtZero: true, border: { display: false },
+      grid: { color: "rgba(16, 24, 40, .07)" }, ticks: { precision: 0, color: MUTED }
+    },
+    x: {
+      border: { display: false }, grid: { display: false },
+      ticks: { color: MUTED, maxRotation: 0, autoSkipPadding: 12 }
+    }
+  };
+
+  function whenPresent(payloadId, canvasId, build) {
+    const payload = document.getElementById(payloadId);
+    const canvas = document.getElementById(canvasId);
+    if (!payload || !canvas) return;
+    build(canvas, JSON.parse(payload.textContent));
+  }
+
+  // Common status definitions
+  const STATUS_PT = {
     in_validation: "Em validação",
     approved: "Aprovada",
     rejected: "Rejeitada",
     sent_to_des: "Enviada para DES",
     closed: "Fechada"
   };
-  const DOC_COLOR = {
+  const STATUS_COLOR = {
     in_validation: "#5b8def",
-    approved:      "#2fb344",
-    rejected:      "#f04438",
-    sent_to_des:   "#f79009",
-    closed:        "#667085"
+    approved: "#2fb344",
+    rejected: "#f04438",
+    sent_to_des: "#f79009",
+    closed: "#667085"
   };
 
-  const docStatusEl = document.getElementById("req-status");
-  if (docStatusEl) {
-    const docStatus = JSON.parse(docStatusEl.textContent);
-    new Chart(document.getElementById("reqChartStatus"), {
+  // ---------- Requester: doc status (donut) ----------
+  whenPresent("req-status", "reqChartStatus", (canvas, docStatus) => {
+    new Chart(canvas, {
       type: "doughnut",
       data: {
-        labels: Object.keys(docStatus).map(key => DOC_PT[key] || key),
+        labels: Object.keys(docStatus).map(key => STATUS_PT[key] || key),
         datasets: [{
           data: Object.values(docStatus),
-          backgroundColor: Object.keys(docStatus).map(key => DOC_COLOR[key] || "#cbd5e1"),
+          backgroundColor: Object.keys(docStatus).map(key => STATUS_COLOR[key] || "#cbd5e1"),
           borderColor: "#fff",
           borderWidth: 2,
           hoverOffset: 8
@@ -202,12 +280,11 @@
       },
       options: { cutout: "66%", aspectRatio: 1.6, plugins: { legend: legend("circle") } }
     });
-  }
+  });
 
-  const docVersionsEl = document.getElementById("req-versions");
-  if (docVersionsEl) {
-    const docVersions = JSON.parse(docVersionsEl.textContent);
-    new Chart(document.getElementById("reqChartVersions"), {
+  // ---------- Requester: versions per document (bar) ----------
+  whenPresent("req-versions", "reqChartVersions", (canvas, docVersions) => {
+    new Chart(canvas, {
       type: "bar",
       data: {
         labels: docVersions.map(row => row.reference),
@@ -221,17 +298,57 @@
       options: {
         indexAxis: "y",
         aspectRatio: 2,
-        scales: {
-          x: {
-            beginAtZero: true, border: { display: false }, grid: { color: "rgba(16, 24, 40, .07)" },
-            ticks: { precision: 0, color: MUTED }
-          },
-          y: { border: { display: false }, grid: { display: false }, ticks: { color: MUTED } }
-        },
+        scales: { x: axis.y, y: { border: { display: false }, grid: { display: false }, ticks: { color: MUTED } } },
         plugins: { legend: { display: false } }
       }
     });
-  }
+  });
+
+  // ---------- CD: status (donut) ----------
+  whenPresent("cd-status", "cdChartStatus", (canvas, cdStatus) => {
+    new Chart(canvas, {
+      type: "doughnut",
+      data: {
+        labels: Object.keys(cdStatus).map(key => STATUS_PT[key] || key),
+        datasets: [{
+          data: Object.values(cdStatus),
+          backgroundColor: Object.keys(cdStatus).map(key => STATUS_COLOR[key] || "#cbd5e1"),
+          borderColor: "#fff",
+          borderWidth: 2,
+          hoverOffset: 8
+        }]
+      },
+      options: { cutout: "66%", aspectRatio: 1.6, plugins: { legend: legend("circle") } }
+    });
+  });
+
+  // ---------- CD: monthly ECs (line) ----------
+  whenPresent("cd-month", "cdChartMonth", (canvas, monthly) => {
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: monthly.map(row => row.month),
+        datasets: [{
+          label: "ECs",
+          data: monthly.map(row => row.count),
+          borderColor: PALETTE.in_validation,
+          backgroundColor: "rgba(91, 141, 239, .16)",
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: "#fff",
+          pointBorderColor: PALETTE.in_validation,
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        aspectRatio: 2.5,
+        scales: { y: axis.y, x: axis.x },
+        plugins: { legend: { display: false } }
+      }
+    });
+  });
 </script>
-{% endif %}
 {% endblock %}
