@@ -11,12 +11,12 @@
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-light">
+<body class="bg-light app-shell">
 
     {% include 'components/navbar.html' %}
 
-    <div class="d-flex">
-        <aside id="sidebarMenu" class="col-lg-2 border-end vh-100 p-3 flex-shrink-0 overflow-auto">
+    <div class="d-flex app-shell-body">
+        <aside id="sidebarMenu" class="col-lg-2 border-end p-3 flex-shrink-0 overflow-auto">
 
             <p class="nav-section">Main</p>
             <ul class="nav flex-column mb-4">
@@ -73,7 +73,7 @@
             {% endif %}
         </aside>
 
-        <main class="flex-grow-1 p-4">
+        <main class="flex-grow-1 p-4 overflow-auto">
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">

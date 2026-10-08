@@ -306,8 +306,8 @@ table.table td .fw-semibold {
 }
 
 /* ==========================================================================
-   Timeline (Histórico) - gaya git branch: garis vertikal + titik
-   Markup: <ul class="ec-timeline"> dengan <li> di dalamnya.
+   Timeline (Histórico) - style git branch: garis vertikal + titik
+   Markup: <ul class="ec-timeline"> ho <li> iha nia laran.
    ========================================================================== */
 .ec-timeline {
     list-style: none;
@@ -363,3 +363,30 @@ table.table td .fw-semibold {
     display: none;
 }
 
+
+/* ==========================================================================
+   App shell: navbar + sidebar nafatin, so <main> mak bele scrol
+   ========================================================================== */
+body.app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* mobile: tuir layar riil nia naruk, laos termasuk URL bar */
+    overflow: hidden;
+}
+
+.app-shell-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#sidebarMenu {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.app-shell main {
+    overflow-y: auto;
+    min-width: 0;
+}
