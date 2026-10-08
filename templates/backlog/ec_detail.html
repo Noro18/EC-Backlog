@@ -13,8 +13,9 @@
     </div>
     <div class="d-flex align-items-center gap-2">
         <span class="badge {{ status_badge_class }}">{{ ec.get_status_display }}</span>
-        <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> Voltar
+        <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary btn-sm"
+            onclick="if (history.length > 1) { history.back(); return false; }">
+                <i class="bi bi-arrow-left"></i> Voltar
         </a>
     </div>
 </div>
