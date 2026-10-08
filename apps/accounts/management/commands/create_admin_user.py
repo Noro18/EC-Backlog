@@ -39,13 +39,13 @@ class Command(BaseCommand):
             role=User.Role.ADMINISTRATOR,
         )
         try:
-            candidate.full_clean(exclude=["password"])  # validasi format/panjang
+            candidate.full_clean(exclude=["password"]) 
             validate_password(password, candidate)
         except ValidationError as exc:
             raise CommandError("\n".join(exc.messages)) from exc
 
         try:
-            with transaction.atomic():  # transaksi hanya saat menulis ke DB
+            with transaction.atomic():
                 User.objects.create_superuser(
                     username=username,
                     email=email,
