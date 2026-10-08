@@ -448,3 +448,131 @@ class TestNewECForm:
         assert "document" in response.context["form"].errors
         assert DocumentVersion.objects.count() == 0
         assert EC.objects.count() == 0
+
+
+def _upload(ec, version, change_reason=""):
+    """Attach a document version through the reverse manager (no documents import)."""
+    return ec.versions.create(
+        version_number=version,
+        file="documents/spec.pdf",
+        uploaded_by=ec.requester,
+        change_reason=change_reason,
+    )
+
+
+class TestECDetail:
+    def test_requires_login(self, client):
+        ec = ECFactory()
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 302
+        assert reverse("accounts:login") in response.url
+
+    def test_returns_200_and_ec_in_context(self, client):
+        ec = ECFactory()
+        client.force_login(ec.requester)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+        assert response.context["ec"] == ec
+
+    def test_unknown_pk_returns_404(self, client):
+        client.force_login(UserFactory())
+        response = client.get(reverse("backlog:ec_detail", args=[99999]))
+
+        assert response.status_code == 404
+
+    def test_shows_real_data(self, client):
+        ec = ECFactory()
+        client.force_login(ec.requester)
+        html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
+
+        assert f"EC-{ec.ec_code}" in html
+        assert ec.reference in html
+        assert ec.description in html
+        assert ec.requester.full_name in html
+        assert ec.release.release_code in html
+
+    def test_status_badge_class(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        client.force_login(ec.requester)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.context["status_badge_class"] == "text-bg-warning"
+        assert '<span class="badge text-bg-warning">' in response.content.decode()
+
+    def test_no_versions_renders_empty_state(self, client):
+        ec = ECFactory()
+        client.force_login(ec.requester)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.context["ec"] == ec
+        assert "Ainda sem documentos" in response.content.decode()
+
+    def test_shows_uploaded_version(self, client):
+        ec = ECFactory()
+        _upload(ec, "v1.0")
+        client.force_login(ec.requester)
+        html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
+
+        assert "v1.0" in html
+        assert "enviado por" in html
+
+    def test_timeline_creation_event_first(self, client):
+        ec = ECFactory()
+        client.force_login(ec.requester)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+        timeline = response.context["timeline"]
+
+        first = timeline[0]
+        assert first["title"] == "EC criada"
+        assert first["who"] == ec.requester.full_name
+        assert first["when"] == ec.created_at
+        assert first["note"] is None
+
+    def test_timeline_upload_events_oldest_first(self, client):
+        ec = ECFactory()
+        _upload(ec, "v1.0", change_reason="Primeira submissão")
+        _upload(ec, "v1.1")
+        client.force_login(ec.requester)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+        timeline = response.context["timeline"]
+
+        assert [event["title"] for event in timeline] == [
+            "EC criada",
+            "Documento v1.0 carregado",
+            "Documento v1.1 carregado",
+        ]
+        assert timeline[1]["note"] == "Primeira submissão"
+        assert timeline[2]["note"] is None
+        whens = [event["when"] for event in timeline]
+        assert whens == sorted(whens)
+
+    def test_creation_date_format(self, client):
+        ec = ECFactory()
+        EC.objects.filter(pk=ec.pk).update(
+            created_at=datetime(2026, 10, 5, 9, 30, tzinfo=ZoneInfo("Asia/Dili"))
+        )
+        client.force_login(ec.requester)
+        html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
+
+        assert "Criada em 05/10/2026 às 09:30" in html
+
+    def test_query_count_does_not_grow_with_versions(self, client):
+        ec = ECFactory()
+        client.force_login(ec.requester)
+        for i in range(3):
+            _upload(ec, f"v1.{i}")
+
+        with CaptureQueriesContext(connection) as small:
+            first = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        for i in range(3, 7):
+            _upload(ec, f"v1.{i}")
+
+        with CaptureQueriesContext(connection) as large:
+            second = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert first.context["ec"] == ec
+        assert second.context["ec"] == ec
+        assert len(large) == len(small)
