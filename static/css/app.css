@@ -312,8 +312,11 @@ table.table td .fw-semibold {
 .ec-timeline {
     list-style: none;
     margin: 0;
-    padding-left: 1.25rem;
-    border-left: 2px solid var(--tt-blue-border);
+    /* No border-left: a box border spans the whole <ul>, so it sticks out
+       above the first dot and below the last one. Each <li> draws its own
+       line segment instead (::after below). 1.375rem = old border(2px)
+       + padding(1.25rem), so the text keeps its exact position. */
+    padding-left: 1.375rem;
 }
 
 .ec-timeline > li {
@@ -328,12 +331,35 @@ table.table td .fw-semibold {
 .ec-timeline > li::before {
     content: "";
     position: absolute;
-    left: -1.25rem;
-    top: 0.35rem;
+    /* Center the dot ON the line: line center sits at li-left - 21px,
+       dot is 10px wide => left = -21 - 5 = -26px. */
+    left: -1.625rem;
+    /* Vertically center on the title's 24px line box (1rem * 1.5):
+       12 - 5 = 7px. */
+    top: 0.4375rem;
     width: 0.625rem;
     height: 0.625rem;
     border-radius: 50%;
     background-color: var(--tt-blue);
     box-shadow: 0 0 0 3px var(--bs-body-bg);
+    z-index: 1; /* paint above the line segment so the line passes behind */
+}
+
+/* Line segment: from this dot's center down to the NEXT dot's center.
+   top 12px = dot center (7 + 5); bottom -28px = 1rem gap (16px) + 12px
+   into the next <li> = next dot's center. */
+.ec-timeline > li::after {
+    content: "";
+    position: absolute;
+    left: -1.375rem; /* -22px: 2px line centered under the dot (center -21) */
+    top: 0.75rem;
+    bottom: -1.75rem;
+    width: 2px;
+    background-color: var(--tt-blue-border);
+}
+
+/* The last event's dot terminates the line. */
+.ec-timeline > li:last-child::after {
+    display: none;
 }
 
