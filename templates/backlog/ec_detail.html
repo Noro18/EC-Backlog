@@ -25,7 +25,7 @@
     <div class="col-lg-7">
 
         <div class="card">
-            <div class="card-header bg-white fw-semibold">Informação Geral</div>
+            <div class="card-header bg-body fw-semibold">Informação Geral</div>
             <div class="card-body">
                 <div class="row g-3">
 
@@ -49,7 +49,7 @@
                         <label class="form-label text-muted small mb-1">Origem</label>
                         <p class="mb-0">
                             {% if ec.is_imported %}
-                                <span class="badge text-bg-light border text-body-secondary">Importado</span>
+                                <span class="badge text-bg-body-secondary border text-body-secondary">Importado</span>
                             {% else %}
                                 <span class="text-body-tertiary">Manual</span>
                             {% endif %}
@@ -66,7 +66,7 @@
         </div>
 
         <div class="card mt-3">
-            <div class="card-header bg-white fw-semibold">Responsáveis</div>
+            <div class="card-header bg-body fw-semibold">Responsáveis</div>
             <div class="card-body">
                 <div class="row g-3">
 
@@ -97,7 +97,7 @@
         </div>
 
         <div class="card mt-3">
-            <div class="card-header bg-white fw-semibold">Documentos</div>
+            <div class="card-header bg-body fw-semibold">Documentos</div>
             <div class="card-body">
                 {% for version in ec.versions.all %}
                     <div class="d-flex justify-content-between align-items-start py-2 {% if not forloop.last %}border-bottom{% endif %}">
@@ -127,7 +127,7 @@
     <div class="col-lg-5">
 
         <div class="card">
-            <div class="card-header bg-white fw-semibold">Histórico</div>
+            <div class="card-header bg-body fw-semibold">Histórico</div>
             <div class="card-body">
                 <ul class="ec-timeline mb-0">
                     {% for event in timeline %}
@@ -138,7 +138,7 @@
                                 {{ event.when|date:"d/m/Y H:i" }}
                             </p>
                             {% if event.note %}
-                                <p class="mb-0 mt-2 p-2 bg-light border rounded small">{{ event.note }}</p>
+                                <p class="mb-0 mt-2 p-2 bg-body-secondary border rounded small">{{ event.note }}</p>
                             {% endif %}
                         </li>
                     {% empty %}

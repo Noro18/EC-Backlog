@@ -169,7 +169,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+                <thead>
                     <tr>
                         <th>Referência</th>
                         <th>Versão</th>
@@ -180,11 +180,7 @@
                 <tbody>
                     {% for item in cd.pending_review %}
                     <tr>
-                        <td class="fw-semibold">
-                            <a href="{% url 'backlog:ec_detail' item.id %}" class="text-decoration-none">
-                                {{ item.reference }}
-                            </a>
-                        </td>
+                        <td class="fw-semibold">{{ item.reference }}</td>
                         <td>{{ item.version }}</td>
                         <td>{{ item.uploaded_at|date:"d/m/Y H:i" }}</td>
                         <td class="text-end">

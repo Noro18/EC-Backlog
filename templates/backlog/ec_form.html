@@ -18,7 +18,7 @@
         <div class="mb-3">
           <label class="form-label" for="{{ form.reference.id_for_label }}">Referência (CR / RT / COR) <span class="text-danger">*</span></label>
           <div class="input-group">
-            <span class="input-group-text bg-white"><i class="bi bi-hash"></i></span>
+            <span class="input-group-text bg-body"><i class="bi bi-hash"></i></span>
             {{ form.reference }}
           </div>
           {% for error in form.reference.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}

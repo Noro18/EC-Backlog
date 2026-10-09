@@ -22,7 +22,7 @@
     --bs-body-font-family: var(--bs-font-sans-serif);
     --bs-body-font-size: 0.9375rem;
     --bs-body-line-height: 1.5;
-    --bs-body-color: #1f2733;
+
 
     /* TT brand colors */
     --tt-blue: #005EFF;
@@ -222,44 +222,22 @@ table.table td .fw-semibold {
 }
 
 
-#sidebarMenu {
-    background-color: #f4f8ff !important;
-    border-right-color: #dbeafe !important;
+[data-bs-theme="dark"] #sidebarMenu {
+    background-color: #0b1220 !important;
+    border-right-color: #1e293b !important;
 }
 
-
-#sidebarMenu .nav-section {
-    color: #01cfff !important; 
-    font-weight: 700;
-    letter-spacing: 0.5px;
+[data-bs-theme="dark"] #sidebarMenu .nav-section {
+    color: #4fd8ff !important;
 }
 
-
-#sidebarMenu .nav-link {
-    color: #0b2a6b !important; 
-    font-weight: 500;
-    transition: background-color 0.2s ease, color 0.2s ease;
+[data-bs-theme="dark"] #sidebarMenu .nav-link {
+    color: #cfe0ff !important;
 }
 
-#sidebarMenu .nav-link:hover {
-    background-color: #e3eeff !important; 
-    color: #0b2a6b !important;
-}
-
-
-#sidebarMenu .nav-link.active,
-#sidebarMenu .nav-link:focus-visible,
-#sidebarMenu .nav-link[aria-current="page"] {
-    background-color: #005cfa !important; 
-    color: #ffffff !important;           
-}
-
-#sidebarMenu .nav-link i {
-    color: #01cfff;
-}
-
-#sidebarMenu .nav-link.active i {
-    color: #ffffff;
+[data-bs-theme="dark"] #sidebarMenu .nav-link:hover {
+    background-color: #17233b !important;
+    color: #e7f0ff !important;
 }
 
 /* ==========================================================================
@@ -389,4 +367,31 @@ body.app-shell {
 .app-shell main {
     overflow-y: auto;
     min-width: 0;
+}
+
+/* Dark theme: badge palettes — only the values change, badge rules read vars */
+[data-bs-theme="dark"] {
+    --tt-blue-bg: #10203f;
+    --tt-blue-text: #cfe0ff;
+    --tt-blue-border: #2b4a86;
+
+    --tt-yellow-bg: #2b2210;
+    --tt-yellow-text: #ffe08a;
+    --tt-yellow-border: #6b5518;
+
+    --tt-green-bg: #0d2a22;
+    --tt-green-text: #7dffd4;
+    --tt-green-border: #1d6b52;
+
+    --tt-red-bg: #2e1216;
+    --tt-red-text: #ffb3ba;
+    --tt-red-border: #7a2730;
+
+    --tt-cyan-bg: #0b2530;
+    --tt-cyan-text: #a5ecff;
+    --tt-cyan-border: #1d5f78;
+
+    --tt-slate-bg: #1e1e1e;
+    --tt-slate-text: #e5e5e5;
+    --tt-slate-border: #4a4a4a;
 }
