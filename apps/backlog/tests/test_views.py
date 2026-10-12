@@ -109,6 +109,61 @@ class TestReleaseList:
         )
         assert "action" not in table.columns.names()
 
+class TestECListVisibility:
+    """RF01 / access control — each role sees only its own ECs."""
+
+    @staticmethod
+    def _login(client, role):
+        user = UserFactory(role=role)
+        client.force_login(user)
+        return user
+
+    def test_requester_sees_only_their_own_ecs(self, client):
+        mine_user = self._login(client, User.Role.REQUESTER)
+        other_user = UserFactory(role=User.Role.REQUESTER)
+        mine = ECFactory(requester=mine_user)
+        theirs = ECFactory(requester=other_user)
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert mine.reference in page
+        assert theirs.reference not in page
+
+    def test_cd_sees_only_ecs_assigned_to_them(self, client):
+        me = self._login(client, User.Role.CD)
+        mine = ECFactory(responsible_cd=me)
+        someone_else = ECFactory(responsible_cd=UserFactory(role=User.Role.CD))
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert mine.reference in page
+        assert someone_else.reference not in page
+
+    def test_administrator_sees_every_ec(self, client):
+        self._login(client, User.Role.ADMINISTRATOR)
+        first = ECFactory()
+        second = ECFactory()
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert first.reference in page
+        assert second.reference in page
+
+    def test_des_team_only_sees_ecs_sent_to_des(self, client):
+        self._login(client, User.Role.DES_TEAM)
+        sent = ECFactory(status=EC.Status.SENT_TO_DES)
+        still_validating = ECFactory(status=EC.Status.IN_VALIDATION)
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert sent.reference in page
+        assert still_validating.reference not in page
+
+    def test_anonymous_users_are_redirected_to_login(self, client):
+        response = client.get(reverse("backlog:ec_list"))
+
+        assert response.status_code == 302
+
 
 class TestReleaseDetail:
     def test_returns_200_and_release_in_context(self, client):

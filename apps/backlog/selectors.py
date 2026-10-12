@@ -22,7 +22,7 @@ def open_releases_with_ec_count():
 
 def dashboard_stats(user) -> dict:
     """Aggregate counters rendered by the dashboard (spec `DASHBOARD.md`)."""
-    ec_qs = _visible_ecs(user)
+    ec_qs = visible_ecs(user)
     release_qs = _visible_releases(user)
 
     status_rows = ec_qs.values("status").annotate(n=Count("id"))
@@ -59,8 +59,10 @@ def dashboard_stats(user) -> dict:
     }
 
 
-def _visible_ecs(user):
-    """Every EC this user is allowed to count."""
+def visible_ecs(user):
+    """ECs this user is allowed to see: requester → own, cd → assigned,
+    des_team → sent to DES, everyone else → all (ARCHITECTURE §5: views
+    read this through selectors, never their own query)."""
     ecs = EC.objects.all()
     if user.role == "requester":
         return ecs.filter(requester=user)
