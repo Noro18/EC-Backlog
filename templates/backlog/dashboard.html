@@ -212,13 +212,19 @@
     {% block extra_js %}
     <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
     <script>
-    const MUTED = "#667085";
-    const PALETTE = { in_validation: "#5b8def" };
+    const DARK = document.documentElement.getAttribute("data-bs-theme") === "dark";
+    const MUTED = DARK ? "#94A3B8" : "#667085";
+    const ACCENT = DARK ? "#3B82F6" : "#5b8def";
+    const AXIS_GRID = DARK ? "rgba(226, 232, 240, .08)" : "rgba(16, 24, 40, .07)";
+    const TOOLTIP_BG = DARK ? "#1E293B" : "#101828";
+    const DONUT_BORDER = DARK ? "#1E293B" : "#fff";
+    const POINT_CENTER = DARK ? "#1E293B" : "#fff";
+    const LINE_FILL = DARK ? "rgba(59, 130, 246, .16)" : "rgba(91, 141, 239, .16)";
     const barStyle = { borderRadius: 5, borderSkipped: false, maxBarThickness: 22 };
 
     Chart.defaults.font.size = 11;
     Chart.defaults.color = MUTED;
-    Chart.defaults.plugins.tooltip.backgroundColor = "#101828";
+    Chart.defaults.plugins.tooltip.backgroundColor = TOOLTIP_BG;
     Chart.defaults.plugins.tooltip.padding = 10;
     Chart.defaults.plugins.tooltip.cornerRadius = 6;
 
@@ -230,7 +236,7 @@
     const axis = {
         y: {
         beginAtZero: true, border: { display: false },
-        grid: { color: "rgba(16, 24, 40, .07)" }, ticks: { precision: 0, color: MUTED }
+        grid: { color: AXIS_GRID }, ticks: { precision: 0, color: MUTED }
         },
         x: {
         border: { display: false }, grid: { display: false },
@@ -253,13 +259,9 @@
         sent_to_des: "Enviada para DES",
         closed: "Fechada"
     };
-    const STATUS_COLOR = {
-        in_validation: "#5b8def",
-        approved: "#2fb344",
-        rejected: "#f04438",
-        sent_to_des: "#f79009",
-        closed: "#667085"
-    };
+    const STATUS_COLOR = DARK
+        ? { in_validation: "#3B82F6", approved: "#22C55E", rejected: "#EF4444", sent_to_des: "#F59E0B", closed: "#94A3B8" }
+        : { in_validation: "#5b8def", approved: "#2fb344", rejected: "#f04438", sent_to_des: "#f79009", closed: "#667085" };
 
     // ---------- Requester: doc status (donut) ----------
     whenPresent("req-status", "reqChartStatus", (canvas, docStatus) => {
@@ -270,7 +272,7 @@
             datasets: [{
             data: Object.values(docStatus),
             backgroundColor: Object.keys(docStatus).map(key => STATUS_COLOR[key] || "#cbd5e1"),
-            borderColor: "#fff",
+            borderColor: DONUT_BORDER,
             borderWidth: 2,
             hoverOffset: 8
             }]
@@ -288,7 +290,7 @@
             datasets: [{
             label: "Versões",
             data: docVersions.map(row => row.versions),
-            backgroundColor: PALETTE.in_validation,
+            backgroundColor: ACCENT,
             ...barStyle
             }]
         },
@@ -310,7 +312,7 @@
             datasets: [{
             data: Object.values(cdStatus),
             backgroundColor: Object.keys(cdStatus).map(key => STATUS_COLOR[key] || "#cbd5e1"),
-            borderColor: "#fff",
+            borderColor: DONUT_BORDER,
             borderWidth: 2,
             hoverOffset: 8
             }]
@@ -328,15 +330,15 @@
             datasets: [{
             label: "ECs",
             data: monthly.map(row => row.count),
-            borderColor: PALETTE.in_validation,
-            backgroundColor: "rgba(91, 141, 239, .16)",
+            borderColor: ACCENT,
+            backgroundColor: LINE_FILL,
             fill: true,
             tension: 0.4,
             borderWidth: 2.5,
             pointRadius: 3,
             pointHoverRadius: 6,
-            pointBackgroundColor: "#fff",
-            pointBorderColor: PALETTE.in_validation,
+            pointBackgroundColor: POINT_CENTER,
+            pointBorderColor: ACCENT,
             pointBorderWidth: 2
             }]
         },

@@ -16,46 +16,80 @@
    Bootstrap picks Inter up through its own CSS variables; the system stack
    stays as fallback so the app still looks native if the font fails to load.
 --------------------------------------------------------------------------- */
-:root {
+:root, [data-bs-theme="light"] {
     --bs-font-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
         "Helvetica Neue", Arial, sans-serif;
     --bs-body-font-family: var(--bs-font-sans-serif);
     --bs-body-font-size: 0.9375rem;
     --bs-body-line-height: 1.5;
 
+    /* Page / surfaces / text — light */
+    --bs-body-bg: #F8FAFC;
+    --bs-body-color: #0F172A;
+    --bs-secondary-color: #64748B;
+    --bs-tertiary-bg: #F1F5F9;
+    --bs-border-color: #E2E8F0;
+    --bs-border-color-translucent: rgba(15, 23, 42, 0.1);
+    --bs-emphasis-color: #0F172A;
+
+    /* Accent */
+    --bs-primary: #2563EB;
+    --bs-primary-rgb: 37, 99, 235;
+    --bs-link-color: #2563EB;
+    --bs-link-hover-color: #1D4ED8;
+
+    /* Status */
+    --bs-success: #16A34A;
+    --bs-success-rgb: 22, 163, 74;
+    --bs-danger: #DC2626;
+    --bs-danger-rgb: 220, 38, 38;
+    --bs-warning: #D97706;
+    --bs-warning-rgb: 217, 119, 6;
+    --bs-info: #0284C7;
+    --bs-info-rgb: 2, 132, 199;
+
+    /* Card / table surfaces */
+    --bs-card-bg: #FFFFFF;
+    --bs-card-border-color: #E2E8F0;
+    --bs-table-border-color: #E2E8F0;
 
     /* TT brand colors */
-    --tt-blue: #005EFF;
-    --tt-blue-bg: #F0F5FF;
-    --tt-blue-text: #001C4C;
-    --tt-blue-border: #8CB7FF;
-    --tt-cyan: #00CFFF;
-    --tt-dark-grey: #141414;
+    --tt-blue: #2563EB;
+    --tt-blue-bg: #EFF6FF;
+    --tt-blue-text: #1E40AF;
+    --tt-blue-border: #BFDBFE;
+    --tt-cyan: #0284C7;
+    --tt-dark-grey: #1E293B;
 
-    /* TT status palette - soft tint, text stays readable */
-    --tt-yellow: #FABD0D;
-    --tt-yellow-bg: #FFFBF0;
-    --tt-yellow-text: #4B3904;
-    --tt-yellow-border: #FDE192;
+    /* Status palette - soft tint, text stays readable */
+    --tt-yellow: #D97706;
+    --tt-yellow-bg: #FFFBEB;
+    --tt-yellow-text: #92400E;
+    --tt-yellow-border: #FDE68A;
 
-    --tt-green: #00FFB2;
-    --tt-green-bg: #F0FFFA;
-    --tt-green-text: #004C35;
-    --tt-green-border: #8CFFDC;
+    --tt-green: #16A34A;
+    --tt-green-bg: #F0FDF4;
+    --tt-green-text: #166534;
+    --tt-green-border: #BBF7D0;
 
-    --tt-red: #FF0F1F;
-    --tt-red-bg: #FFF1F2;
-    --tt-red-text: #4C0409;
-    --tt-red-border: #FF939A;
+    --tt-red: #DC2626;
+    --tt-red-bg: #FEF2F2;
+    --tt-red-text: #991B1B;
+    --tt-red-border: #FCA5A5;
 
-    --tt-cyan-bg: #F0FCFF;
-    --tt-cyan-text: #003E4C;
-    --tt-cyan-border: #8CE9FF;
+    --tt-cyan-bg: #F0F9FF;
+    --tt-cyan-text: #075985;
+    --tt-cyan-border: #BAE6FD;
 
-    --tt-slate: #303030;
-    --tt-slate-bg: #F3F3F3;
-    --tt-slate-text: #0E0E0E;
-    --tt-slate-border: #A2A2A2;
+    --tt-slate: #64748B;
+    --tt-slate-bg: #F1F5F9;
+    --tt-slate-text: #334155;
+    --tt-slate-border: #CBD5E1;
+
+    --app-bg: #F8FAFC;
+    --app-surface: #FFFFFF;
+    --app-border: #E2E8F0;
+    --app-muted: #64748B;
 }
 
 body {
@@ -80,18 +114,43 @@ h1, h2, h3, h4, h5, h6,
     color: var(--bs-secondary-color);
 }
 
+/* ---------------------------------------------------------------------------
+   Sidebar — one block per theme; dark overrides live next to the dark palette
+--------------------------------------------------------------------------- */
+#sidebarMenu {
+    background-color: #FFFFFF !important;
+    border-right-color: #E2E8F0 !important;
+}
+
 #sidebarMenu .nav-link {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem;
     border-radius: 0.375rem;
-    color: var(--bs-secondary-color);
+    color: #334155 !important;
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #sidebarMenu .nav-link:hover {
-    background-color: var(--bs-tertiary-bg);
-    color: var(--bs-body-color);
+    background-color: #F1F5F9 !important;
+    color: #0F172A !important;
+}
+
+#sidebarMenu .nav-link.active,
+#sidebarMenu .nav-link:focus-visible,
+#sidebarMenu .nav-link[aria-current="page"] {
+    background-color: var(--tt-blue-bg) !important;
+    color: var(--tt-blue) !important;
+}
+
+#sidebarMenu .nav-link i {
+    color: #64748B;
+}
+
+#sidebarMenu .nav-link.active i {
+    color: var(--tt-blue);
 }
 
 /* ---------------------------------------------------------------------------
@@ -221,25 +280,6 @@ table.table td .fw-semibold {
     z-index: 1;
 }
 
-
-[data-bs-theme="dark"] #sidebarMenu {
-    background-color: #0b1220 !important;
-    border-right-color: #1e293b !important;
-}
-
-[data-bs-theme="dark"] #sidebarMenu .nav-section {
-    color: #4fd8ff !important;
-}
-
-[data-bs-theme="dark"] #sidebarMenu .nav-link {
-    color: #cfe0ff !important;
-}
-
-[data-bs-theme="dark"] #sidebarMenu .nav-link:hover {
-    background-color: #17233b !important;
-    color: #e7f0ff !important;
-}
-
 /* ==========================================================================
    Status badges - soft TT palette (kombinasi kuning,hijau,merah,abu)
    ========================================================================== */
@@ -284,8 +324,8 @@ table.table td .fw-semibold {
 }
 
 /* ==========================================================================
-   Timeline (Histórico) - style git branch: garis vertikal + titik
-   Markup: <ul class="ec-timeline"> ho <li> iha nia laran.
+   Timeline (Histórico) - gaya git branch: garis vertikal + titik
+   Markup: <ul class="ec-timeline"> dengan <li> di dalamnya.
    ========================================================================== */
 .ec-timeline {
     list-style: none;
@@ -341,15 +381,14 @@ table.table td .fw-semibold {
     display: none;
 }
 
-
 /* ==========================================================================
-   App shell: navbar + sidebar nafatin, so <main> mak bele scrol
+   App shell: navbar + sidebar stay fixed, only <main> scrolls
    ========================================================================== */
 body.app-shell {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    height: 100dvh; /* mobile: tuir layar riil nia naruk, laos termasuk URL bar */
+    height: 100dvh; /* mobile: follow the real viewport, not the one behind the URL bar */
     overflow: hidden;
 }
 
@@ -369,42 +408,137 @@ body.app-shell {
     min-width: 0;
 }
 
-/* Dark theme: badge palettes — only the values change, badge rules read vars */
+/* ==========================================================================
+   Dark theme — Slate + Blue palette
+   ========================================================================== */
 [data-bs-theme="dark"] {
-    --tt-blue-bg: #10203f;
-    --tt-blue-text: #cfe0ff;
-    --tt-blue-border: #2b4a86;
+    --bs-body-bg: #0A1633;
+    --bs-body-color: #E2E8F0;
+    --bs-secondary-color: #94A3B8;
+    --bs-tertiary-bg: #1E293B;
+    --bs-border-color: #334155;
+    --bs-border-color-translucent: rgba(226, 232, 240, 0.15);
+    --bs-emphasis-color: #F8FAFC;
 
-    --tt-yellow-bg: #2b2210;
-    --tt-yellow-text: #ffe08a;
-    --tt-yellow-border: #6b5518;
+    --bs-primary: #3B82F6;
+    --bs-primary-rgb: 59, 130, 246;
+    --bs-link-color: #60A5FA;
+    --bs-link-hover-color: #93C5FD;
 
-    --tt-green-bg: #0d2a22;
-    --tt-green-text: #7dffd4;
-    --tt-green-border: #1d6b52;
+    --bs-success: #22C55E;
+    --bs-success-rgb: 34, 197, 94;
+    --bs-danger: #EF4444;
+    --bs-danger-rgb: 239, 68, 68;
+    --bs-warning: #F59E0B;
+    --bs-warning-rgb: 245, 158, 11;
+    --bs-info: #38BDF8;
+    --bs-info-rgb: 56, 189, 248;
 
-    --tt-red-bg: #2e1216;
-    --tt-red-text: #ffb3ba;
-    --tt-red-border: #7a2730;
+    --bs-card-bg: #1E293B;
+    --bs-card-border-color: #334155;
+    --bs-table-border-color: #334155;
 
-    --tt-cyan-bg: #0b2530;
-    --tt-cyan-text: #a5ecff;
-    --tt-cyan-border: #1d5f78;
+    --tt-blue: #3B82F6;
+    --tt-blue-bg: #172554;
+    --tt-blue-text: #BFDBFE;
+    --tt-blue-border: #1E40AF;
+    --tt-cyan: #38BDF8;
 
-    --tt-slate-bg: #1e1e1e;
-    --tt-slate-text: #e5e5e5;
-    --tt-slate-border: #4a4a4a;
+    --tt-yellow: #F59E0B;
+    --tt-yellow-bg: #451A03;
+    --tt-yellow-text: #FCD34D;
+    --tt-yellow-border: #92400E;
+
+    --tt-green: #22C55E;
+    --tt-green-bg: #052E16;
+    --tt-green-text: #86EFAC;
+    --tt-green-border: #166534;
+
+    --tt-red: #EF4444;
+    --tt-red-bg: #450A0A;
+    --tt-red-text: #FCA5A5;
+    --tt-red-border: #991B1B;
+
+    --tt-cyan-bg: #0C4A6E;
+    --tt-cyan-text: #7DD3FC;
+    --tt-cyan-border: #0369A1;
+
+    --tt-slate: #94A3B8;
+    --tt-slate-bg: #1E293B;
+    --tt-slate-text: #E2E8F0;
+    --tt-slate-border: #475569;
+
+    --app-bg: #0A1633;
+    --app-surface: #1E293B;
+    --app-border: #334155;
+    --app-muted: #94A3B8;
 }
 
+[data-bs-theme="dark"] #sidebarMenu {
+    background-color: #111827 !important;
+    border-right-color: #334155 !important;
+}
+
+[data-bs-theme="dark"] #sidebarMenu .nav-link {
+    color: #CBD5E1 !important;
+}
+
+[data-bs-theme="dark"] #sidebarMenu .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #F8FAFC !important;
+}
+
+[data-bs-theme="dark"] #sidebarMenu .nav-link.active,
+[data-bs-theme="dark"] #sidebarMenu .nav-link:focus-visible,
+[data-bs-theme="dark"] #sidebarMenu .nav-link[aria-current="page"] {
+    background-color: rgba(59, 130, 246, 0.22) !important;
+    color: #8CB7FF !important;
+}
+
+[data-bs-theme="dark"] #sidebarMenu .nav-link i {
+    color: #94A3B8;
+}
+
+[data-bs-theme="dark"] #sidebarMenu .nav-link.active i {
+    color: #8CB7FF;
+}
 
 /* ==========================================================================
-   Cards: visible border — grey in light mode, white in dark mode
+   Dashboard cards — border follows the palette
    ========================================================================== */
 .dash-widgets .card.border-0 {
-    border-width: 1px !important;
-    border-style: solid !important;
+    border: 1px solid #E2E8F0 !important;
 }
-.dash-widgets .card { --bs-card-border-color: rgba(218, 213, 213, 0.2); }
-[data-bs-theme="dark"] .dash-widgets .card { --bs-card-border-color: rgba(255, 255, 255, 0.55); }
 
+[data-bs-theme="dark"] .dash-widgets .card.border-0 {
+    border-color: #334155 !important;
+}
+
+/* ==========================================================================
+   Accent buttons — Bootstrap hardcodes #0d6efd in .btn-primary, so the
+   palette blue has to be restated here for both themes.
+   ========================================================================== */
+.btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #2563EB;
+    --bs-btn-border-color: #2563EB;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #1D4ED8;
+    --bs-btn-hover-border-color: #1D4ED8;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #1E40AF;
+    --bs-btn-active-border-color: #1E40AF;
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #93C5FD;
+    --bs-btn-disabled-border-color: #93C5FD;
+}
+
+[data-bs-theme="dark"] .btn-primary {
+    --bs-btn-bg: #3B82F6;
+    --bs-btn-border-color: #3B82F6;
+    --bs-btn-hover-bg: #2563EB;
+    --bs-btn-hover-border-color: #2563EB;
+    --bs-btn-active-bg: #1D4ED8;
+    --bs-btn-active-border-color: #1D4ED8;
+}
 
