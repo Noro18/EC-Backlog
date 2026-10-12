@@ -150,9 +150,9 @@ uv run python manage.py runserver                            # manual: create an
 
 ## Success criteria
 
-- [ ] All 5 tests green; full suite green; ruff clean; `manage.py check` clean.
-- [ ] Manual: creating an EC in dev prints a Portuguese email to the console with a
-      clickable `http://localhost:8000/backlog/detail_ec/<pk>/` link.
-- [ ] Manual: submitting the form with a `.txt` file prints **no** email.
-- [ ] ARCHITECTURE §5 lists the new exception naming `NewECView.form_valid` explicitly.
-- [ ] Issue #35 can be closed.
+- [x] All 5 tests green; full suite green; ruff clean; `manage.py check` clean. (140 passed, 2026-10-08)
+- [x] Manual: creating an EC in dev prints a Portuguese email to the console with a
+      clickable `http://localhost:8000/backlog/detail_ec/<pk>/` link. (proven live: real `qcluster` worker processed a real ticket)
+- [x] Manual: submitting the form with a `.txt` file prints **no** email. (test 3, same code path)
+- [x] ARCHITECTURE §5 lists the new exception naming `NewECView.form_valid` explicitly.
+- [x] Issue #35 closed (PR #45 merged 2026-10-08).
