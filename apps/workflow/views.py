@@ -1,1 +1,56 @@
-# Create your views here.
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django.views.generic import FormView
+
+from apps.backlog.models import EC
+
+from .forms import ReviewForm
+from .selectors import latest_version
+from .services import approve_ec, reject_ec
+
+
+class ReviewECView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    """RF09: the assigned CD approves or rejects an in_validation EC."""
+
+    form_class = ReviewForm
+    template_name = "workflow/review_ec.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.ec = get_object_or_404(EC, pk=self.kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def test_func(self):  # check the auth
+        return (
+            self.request.user.pk == self.ec.responsible_cd_id
+            and self.ec.status == EC.Status.IN_VALIDATION
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["ec"] = self.ec
+        version = latest_version(self.ec)
+        context["latest_version_number"] = version.version_number if version else None
+        return context
+
+    def form_valid(self, form):
+        decision = form.cleaned_data["decision"]
+        comment = form.cleaned_data["comment"]
+        try:
+            if decision == "approve":
+                approve_ec(self.ec, self.request.user)
+                messages.success(self.request, f"EC {self.ec.ec_code} aprovada.")
+            else:
+                reject_ec(self.ec, self.request.user, comment)
+                messages.success(self.request, f"EC {self.ec.ec_code} rejeitada.")
+        except (ValidationError, PermissionDenied) as error:
+            # Race: status changed between GET and POST (double tab).
+            # Surfaces as a form error, never a 500.
+            form.add_error(None, error.messages if hasattr(error, "messages") else str(error))
+            return self.form_invalid(form)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("backlog:ec_detail", args=[self.ec.pk])
