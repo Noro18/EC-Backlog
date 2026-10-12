@@ -1,10 +1,12 @@
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
+from apps.accounts.models import User
 from apps.backlog.models import EC
 from apps.documents.models import DocumentVersion  # workflow → documents: downward, allowed
+from apps.documents.services import create_next_version
 from apps.workflow.models import Review
-from apps.workflow.notifications import queue_decision_made
+from apps.workflow.notifications import queue_cd_assigned, queue_decision_made
 from apps.workflow.selectors import latest_version
 
 
@@ -60,3 +62,28 @@ def reject_ec(ec: EC, cd, comment: str) -> Review:
         ec.save(update_fields=["status"])
         queue_decision_made(ec)
     return review
+
+
+def resubmit_ec(ec, user, file, change_reason="", major=False, responsible_cd=None):
+    """RF05: requester uploads a fix for a rejected EC — new version row,
+    status back to in_validation, CD notified."""
+    if ec.status != EC.Status.REJECTED:
+        raise ValidationError("Only a rejected EC can be resubmitted.")
+    if user.pk != ec.requester_id:
+        raise PermissionDenied("Only the requester can resubmit this EC.")
+    if responsible_cd is not None and responsible_cd.role != User.Role.CD:
+        raise ValidationError("The responsible must be a CD user.")
+    with transaction.atomic():
+        version = create_next_version(
+            ec=ec,
+            file=file,
+            uploaded_by=user,
+            change_reason=change_reason,
+            major=major,
+        )
+        if responsible_cd is not None:
+            ec.responsible_cd = responsible_cd
+        ec.status = EC.Status.IN_VALIDATION
+        ec.save(update_fields=["responsible_cd", "status"])
+        queue_cd_assigned(ec)
+    return version
