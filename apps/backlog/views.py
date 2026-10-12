@@ -17,10 +17,10 @@ from .forms import ECCreateForm
 from .models import EC, Release
 from .selectors import (
     build_ec_timeline,
+    cd_dashboard,
     dashboard_stats,
     release_with_ec_count,
     requester_dashboard,
-    cd_dashboard
 )
 from .services import create_ec
 from .tables import EC_BADGE_CLASSES, RELEASE_BADGE_CLASSES, ECTable, ReleaseTable
