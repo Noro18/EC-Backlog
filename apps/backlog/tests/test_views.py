@@ -165,6 +165,81 @@ class TestECListVisibility:
         assert response.status_code == 302
 
 
+class TestECListSearch:
+    """RF12 — the toolbar above the EC list filters by text and status."""
+
+    @staticmethod
+    def _login(client, role=User.Role.ADMINISTRATOR):
+        user = UserFactory(role=role)
+        client.force_login(user)
+        return user
+
+    def test_q_filters_by_reference(self, client):
+        self._login(client)
+        hit = ECFactory(reference="COR2026001")
+        miss = ECFactory(reference="XYZ9999999")
+
+        page = client.get(reverse("backlog:ec_list"), {"q": "COR2026"}).content.decode()
+
+        assert hit.reference in page
+        assert miss.reference not in page
+
+    def test_q_filters_by_description(self, client):
+        self._login(client)
+        hit = ECFactory(description="Troca do módulo de billing")
+        miss = ECFactory(description="Ajuste de layout")
+
+        page = client.get(reverse("backlog:ec_list"), {"q": "billing"}).content.decode()
+
+        assert hit.reference in page
+        assert miss.reference not in page
+
+    def test_q_matches_the_ec_id(self, client):
+        self._login(client)
+        hit = ECFactory(year=2019, number_sequence=12, reference="OLD2019")
+        miss = ECFactory(year=2026, number_sequence=12, reference="NEW2026")
+
+        page = client.get(reverse("backlog:ec_list"), {"q": "2019-012"}).content.decode()
+
+        assert hit.reference in page
+        assert miss.reference not in page
+
+    def test_q_matches_the_ec_id_with_the_displayed_prefix(self, client):
+        """The table renders 'EC-2019-012', so users type it that way too."""
+        self._login(client)
+        hit = ECFactory(year=2019, number_sequence=12, reference="OLD2019")
+        miss = ECFactory(year=2026, number_sequence=12, reference="NEW2026")
+
+        page = client.get(reverse("backlog:ec_list"), {"q": "EC-2019-012"}).content.decode()
+
+        assert hit.reference in page
+        assert miss.reference not in page
+
+    def test_status_select_filters_the_table(self, client):
+        self._login(client)
+        approved = ECFactory(status=EC.Status.APPROVED)
+        rejected = ECFactory(status=EC.Status.REJECTED)
+
+        page = client.get(reverse("backlog:ec_list"), {"status": "approved"}).content.decode()
+
+        assert approved.reference in page
+        assert rejected.reference not in page
+
+    def test_text_and_status_filters_combine(self, client):
+        self._login(client)
+        wanted = ECFactory(reference="BETA-001", status=EC.Status.APPROVED)
+        wrong_status = ECFactory(reference="BETA-002", status=EC.Status.REJECTED)
+        wrong_text = ECFactory(reference="ALFA-001", status=EC.Status.APPROVED)
+
+        page = client.get(
+            reverse("backlog:ec_list"), {"q": "BETA", "status": "approved"}
+        ).content.decode()
+
+        assert wanted.reference in page
+        assert wrong_status.reference not in page
+        assert wrong_text.reference not in page
+
+
 class TestReleaseDetail:
     def test_returns_200_and_release_in_context(self, client):
         release = ReleaseFactory(year=2027, number_sequence=42)

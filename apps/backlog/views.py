@@ -14,10 +14,11 @@ from .forms import ECCreateForm
 from .models import EC, Release
 from .selectors import (
     build_ec_timeline,
+    cd_dashboard,
     dashboard_stats,
     release_with_ec_count,
     requester_dashboard,
-    cd_dashboard,
+    search_ecs,
     visible_ecs,
 )
 from .services import create_ec
@@ -45,7 +46,12 @@ class ECListView(LoginRequiredMixin, SingleTableView):
     template_name = "backlog/ec_list.html"
 
     def get_queryset(self):
-        return visible_ecs(self.request.user)
+        params = self.request.GET
+        return search_ecs(
+            visible_ecs(self.request.user),
+            q=params.get("q"),
+            status=params.get("status"),
+        )
 
 class ReleaseListView(SingleTableView):
     model = Release
