@@ -25,4 +25,5 @@ urlpatterns = [
     path("", include("apps.accounts.urls")),
     # path("", TemplateView.as_view(template_name="accounts/login.html"), name="login"),
     path("backlog/", include("apps.backlog.urls")),
+    path("workflow/", include("apps.workflow.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

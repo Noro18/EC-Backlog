@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Review EC-{{ ec.ec_code }} — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h3 class="mb-1">Review EC-{{ ec.ec_code }}</h3>
+        <p class="text-muted mb-0">{{ ec.reference }} — versão {{ latest_version_number|default:"(sem versão)" }}</p>
+    </div>
+    <a href="{% url 'backlog:ec_detail' ec.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-body fw-semibold">Decisão do CD</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <span class="form-label d-block">Decisão <span class="text-danger">*</span></span>
+                        {% for radio in form.decision %}
+                        <div class="form-check">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
+                        {% endfor %}
+                        {% for error in form.decision.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.comment.id_for_label }}">Comentário</label>
+                        {{ form.comment }}
+                        {% for error in form.comment.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">Submeter decisão</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
