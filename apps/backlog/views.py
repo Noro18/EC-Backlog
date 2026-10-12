@@ -9,6 +9,9 @@ from django_tables2 import RequestConfig, SingleTableView
 
 from apps.accounts.models import User
 from apps.documents.services import create_first_version  # documented exception, ARCHITECTURE.md §5
+from apps.workflow.notifications import (
+    queue_cd_assigned,  # documented exception, ARCHITECTURE.md §5
+)
 
 from .forms import ECCreateForm
 from .models import EC, Release
@@ -76,6 +79,7 @@ class NewECView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
                 if file := self.request.FILES.get("document"):
                     failed_on = "document"
                     create_first_version(ec=ec, uploaded_by=self.request.user, file=file)
+                queue_cd_assigned(ec)  # RF08 — inside atomic: a rollback discards the hook
         except ValidationError as error:
             # full_clean() raises a message_dict ({"file": [...]}) — flatten it so
             # the message can attach to OUR field name (document vs release).
