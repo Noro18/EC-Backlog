@@ -8,9 +8,12 @@ from django.urls import reverse
 from apps.accounts.models import User
 from apps.backlog.models import EC
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
-from apps.workflow.notifications import send_cd_assigned_email
+from apps.documents.tests.factories import DocumentVersionFactory
+from apps.workflow.notifications import send_cd_assigned_email, send_decision_email
+from apps.workflow.services import approve_ec
 
 pytestmark = pytest.mark.django_db
+
 
 class TestCDAssignmentNotification:
     def test_create_ec_sends_email_to_the_cd(self, client):
@@ -19,7 +22,9 @@ class TestCDAssignmentNotification:
         client.force_login(req)
         release = ReleaseFactory()
 
-        with TestCase.captureOnCommitCallbacks(execute=True): # uza ida ne'e tanba transaction.on_commit so bele work se quando transction nebe wrap iha atomic() ne bener bener save duni ba row. maibe tanba iha test ne labele entaun uza captureOnCommitCallbacks
+        with TestCase.captureOnCommitCallbacks(
+            execute=True
+        ):  # uza ida ne'e tanba transaction.on_commit so bele work se quando transction nebe wrap iha atomic() ne bener bener save duni ba row. maibe tanba iha test ne labele entaun uza captureOnCommitCallbacks
             response = client.post(
                 reverse("backlog:ec_form"),
                 data={
@@ -92,4 +97,36 @@ class TestCDAssignmentNotification:
 
         send_cd_assigned_email(ec.pk)
         assert mail.outbox == []
-        
+
+
+class TestDecisionEmailGuards:
+    def test_task_ignores_a_deleted_ec(self):
+        send_decision_email(99999)  # no such EC — deleted before the worker ran
+        assert mail.outbox == []
+
+    def test_task_ignores_an_ec_without_versions(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(requester=requester, responsible_cd=cd)
+
+        send_decision_email(ec.pk)
+        assert mail.outbox == []
+
+    def test_task_ignores_a_version_without_review(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(requester=requester, responsible_cd=cd)
+        DocumentVersionFactory(ec=ec, version_number="v1.0")
+
+        send_decision_email(ec.pk)
+        assert mail.outbox == []
+
+    def test_task_skips_a_requester_without_email(self):
+        requester = UserFactory(role=User.Role.REQUESTER, email="")
+        cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(requester=requester, responsible_cd=cd)
+        DocumentVersionFactory(ec=ec, version_number="v1.0")
+        approve_ec(ec, cd)
+
+        send_decision_email(ec.pk)
+        assert mail.outbox == []
