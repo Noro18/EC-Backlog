@@ -31,6 +31,10 @@ DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
+# Base URL of this deployment, used for absolute links in emails (RF08).
+# Production must override it in .env — the default only points at localhost.
+SITE_URL = env("SITE_URL", default="http://localhost:8000")
+
 
 # Application definition
 

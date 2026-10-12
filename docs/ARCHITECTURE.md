@@ -100,6 +100,11 @@ An arrow means "may import from". Each app may import only from apps to its righ
   No other `backlog` module may import from `documents` — in particular `backlog/forms.py`
   must not import `documents/validators.py`; file validation belongs in the `documents`
   service. Widening this exception requires a new entry here.
+- **Documented exception (RF08_CD_NOTIFICATION.md Decision 1, agreed 2026-10-08):** the single call site
+  `NewECView.form_valid` in `backlog/views.py` may import `queue_cd_assigned` from
+  `apps.workflow.notifications`, because RF08 notifies the CD at EC creation time and the
+  call is registered inside the creating transaction so a rollback discards it.
+  No other `backlog` module may import from `workflow`.
 - If you feel a need to import upward, stop. Either move the logic up into the higher app, or move the shared piece down. If neither fits, ask the user.
 - Reference models in other apps by string (`"backlog.EC"`) in `ForeignKey` fields where it avoids an import.
 - Reading data from below is fine (`ec.versions.all()` through reverse relations).
