@@ -7,9 +7,10 @@ from django.views.generic import FormView
 
 from apps.backlog.models import EC
 
-from .forms import ReviewForm
+from .forms import ResubmitForm, ReviewForm
+from .models import Review
 from .selectors import latest_version
-from .services import approve_ec, reject_ec
+from .services import approve_ec, reject_ec, resubmit_ec
 
 
 class ReviewECView(LoginRequiredMixin, UserPassesTestMixin, FormView):
@@ -50,6 +51,54 @@ class ReviewECView(LoginRequiredMixin, UserPassesTestMixin, FormView):
             # Surfaces as a form error, never a 500.
             form.add_error(None, error.messages if hasattr(error, "messages") else str(error))
             return self.form_invalid(form)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("backlog:ec_detail", args=[self.ec.pk])
+
+
+class ResubmitECView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    """RF05: the requester uploads a fix for a rejected EC."""
+
+    form_class = ResubmitForm
+    template_name = "workflow/resubmit_ec.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.ec = get_object_or_404(EC, pk=self.kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def test_func(self):
+        return self.request.user.pk == self.ec.requester_id and self.ec.status == EC.Status.REJECTED
+
+    def get_initial(self):
+        return {"responsible_cd": self.ec.responsible_cd_id}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["ec"] = self.ec
+        context["rejection_comment"] = None
+        version = latest_version(self.ec)
+        if version is not None:
+            try:
+                context["rejection_comment"] = version.review.comment
+            except Review.DoesNotExist:
+                pass
+        return context
+
+    def form_valid(self, form):
+        try:
+            resubmit_ec(
+                self.ec,
+                self.request.user,
+                file=self.request.FILES["document"],
+                change_reason=form.cleaned_data["change_reason"],
+                major=form.cleaned_data["major_change"],
+                responsible_cd=form.cleaned_data["responsible_cd"],
+            )
+        except (ValidationError, PermissionDenied) as error:
+            form.add_error(None, getattr(error, "messages", str(error)))
+            return self.form_invalid(form)
+        messages.success(self.request, f"EC {self.ec.ec_code} reenviada para validação.")
         return super().form_valid(form)
 
     def get_success_url(self):
