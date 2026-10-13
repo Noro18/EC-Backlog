@@ -38,13 +38,11 @@ class TestDashboardAccess:
 
 
 class TestRolePlaceholders:
-    # The requester row is deliberately absent: its widgets are implemented,
-    # so it shows real content instead of a placeholder (see
-    # `TestRequesterDashboard` below).
+    # Requester and CD rows are absent: their widgets are implemented,
+    # so they show real content instead of a placeholder.
     @pytest.mark.parametrize(
         "role,expected",
         [
-            (User.Role.CD, "Widgets específicos do CD"),
             (User.Role.DES_TEAM, "Widgets específicos do DES Team"),
             (User.Role.ADMINISTRATOR, "Widgets específicos do Administrador"),
         ],
@@ -238,6 +236,7 @@ class TestRequesterDashboard:
         assert response.status_code == 200
         assert "req" in response.context
         assert "Documentos por estado" in html
-        assert "precisam da sua ação" in html
+        # The rejections card was deliberately removed from the dashboard.
+        assert "precisam da sua ação" not in html
         # The placeholder must be gone once the real widgets are in place.
         assert "em construção" not in html
