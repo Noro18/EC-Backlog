@@ -109,6 +109,136 @@ class TestReleaseList:
         )
         assert "action" not in table.columns.names()
 
+class TestECListVisibility:
+    """RF01 / access control — each role sees only its own ECs."""
+
+    @staticmethod
+    def _login(client, role):
+        user = UserFactory(role=role)
+        client.force_login(user)
+        return user
+
+    def test_requester_sees_only_their_own_ecs(self, client):
+        mine_user = self._login(client, User.Role.REQUESTER)
+        other_user = UserFactory(role=User.Role.REQUESTER)
+        mine = ECFactory(requester=mine_user)
+        theirs = ECFactory(requester=other_user)
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert mine.reference in page
+        assert theirs.reference not in page
+
+    def test_cd_sees_only_ecs_assigned_to_them(self, client):
+        me = self._login(client, User.Role.CD)
+        mine = ECFactory(responsible_cd=me)
+        someone_else = ECFactory(responsible_cd=UserFactory(role=User.Role.CD))
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert mine.reference in page
+        assert someone_else.reference not in page
+
+    def test_administrator_sees_every_ec(self, client):
+        self._login(client, User.Role.ADMINISTRATOR)
+        first = ECFactory()
+        second = ECFactory()
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert first.reference in page
+        assert second.reference in page
+
+    def test_des_team_only_sees_ecs_sent_to_des(self, client):
+        self._login(client, User.Role.DES_TEAM)
+        sent = ECFactory(status=EC.Status.SENT_TO_DES)
+        still_validating = ECFactory(status=EC.Status.IN_VALIDATION)
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert sent.reference in page
+        assert still_validating.reference not in page
+
+    def test_anonymous_users_are_redirected_to_login(self, client):
+        response = client.get(reverse("backlog:ec_list"))
+
+        assert response.status_code == 302
+
+
+class TestECListSearch:
+    """RF12 — the toolbar above the EC list filters by text and status."""
+
+    @staticmethod
+    def _login(client, role=User.Role.ADMINISTRATOR):
+        user = UserFactory(role=role)
+        client.force_login(user)
+        return user
+
+    def test_q_filters_by_reference(self, client):
+        self._login(client)
+        hit = ECFactory(reference="COR2026001")
+        miss = ECFactory(reference="XYZ9999999")
+
+        page = client.get(reverse("backlog:ec_list"), {"q": "COR2026"}).content.decode()
+
+        assert hit.reference in page
+        assert miss.reference not in page
+
+    def test_q_filters_by_description(self, client):
+        self._login(client)
+        hit = ECFactory(description="Troca do módulo de billing")
+        miss = ECFactory(description="Ajuste de layout")
+
+        page = client.get(reverse("backlog:ec_list"), {"q": "billing"}).content.decode()
+
+        assert hit.reference in page
+        assert miss.reference not in page
+
+    def test_q_matches_the_ec_id(self, client):
+        self._login(client)
+        hit = ECFactory(year=2019, number_sequence=12, reference="OLD2019")
+        miss = ECFactory(year=2026, number_sequence=12, reference="NEW2026")
+
+        page = client.get(reverse("backlog:ec_list"), {"q": "2019-012"}).content.decode()
+
+        assert hit.reference in page
+        assert miss.reference not in page
+
+    def test_q_matches_the_ec_id_with_the_displayed_prefix(self, client):
+        """The table renders 'EC-2019-012', so users type it that way too."""
+        self._login(client)
+        hit = ECFactory(year=2019, number_sequence=12, reference="OLD2019")
+        miss = ECFactory(year=2026, number_sequence=12, reference="NEW2026")
+
+        page = client.get(reverse("backlog:ec_list"), {"q": "EC-2019-012"}).content.decode()
+
+        assert hit.reference in page
+        assert miss.reference not in page
+
+    def test_status_select_filters_the_table(self, client):
+        self._login(client)
+        approved = ECFactory(status=EC.Status.APPROVED)
+        rejected = ECFactory(status=EC.Status.REJECTED)
+
+        page = client.get(reverse("backlog:ec_list"), {"status": "approved"}).content.decode()
+
+        assert approved.reference in page
+        assert rejected.reference not in page
+
+    def test_text_and_status_filters_combine(self, client):
+        self._login(client)
+        wanted = ECFactory(reference="BETA-001", status=EC.Status.APPROVED)
+        wrong_status = ECFactory(reference="BETA-002", status=EC.Status.REJECTED)
+        wrong_text = ECFactory(reference="ALFA-001", status=EC.Status.APPROVED)
+
+        page = client.get(
+            reverse("backlog:ec_list"), {"q": "BETA", "status": "approved"}
+        ).content.decode()
+
+        assert wanted.reference in page
+        assert wrong_status.reference not in page
+        assert wrong_text.reference not in page
+
 
 class TestReleaseDetail:
     def test_returns_200_and_release_in_context(self, client):

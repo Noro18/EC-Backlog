@@ -21,6 +21,8 @@ from .selectors import (
     dashboard_stats,
     release_with_ec_count,
     requester_dashboard,
+    search_ecs,
+    visible_ecs,
 )
 from .services import create_ec
 from .tables import EC_BADGE_CLASSES, RELEASE_BADGE_CLASSES, ECTable, ReleaseTable
@@ -41,12 +43,18 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return context
     
 
-
-class ECListView(SingleTableView):
+class ECListView(LoginRequiredMixin, SingleTableView):
     model = EC
     table_class = ECTable  # ida ne mak nia qeury
     template_name = "backlog/ec_list.html"
 
+    def get_queryset(self):
+        params = self.request.GET
+        return search_ecs(
+            visible_ecs(self.request.user),
+            q=params.get("q"),
+            status=params.get("status"),
+        )
 
 class ReleaseListView(SingleTableView):
     model = Release

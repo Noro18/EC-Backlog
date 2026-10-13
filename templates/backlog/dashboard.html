@@ -64,62 +64,66 @@
             <div class="col-lg-7">
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">
-                        Versões por documento
+                        Progresso das versões e rejeições
+                        <p class="text-muted mb-1">A versão atual aparece em destaque.</p>
                     </div>
-                    <div class="card-body pt-2 pb-3">
-                        <canvas id="reqChartVersions"></canvas>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr class="text-muted small">
+                                        <th class="ps-3 fw-semibold">EC</th>
+                                        <th class="fw-semibold">Versões</th>
+                                        <th class="fw-semibold">Estado</th>
+                                        <th class="fw-semibold">Comentário do CD</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in req.my_ecs %}
+                                    <tr>
+                                        <td class="ps-3 fw-semibold">
+                                            <a href="{% url 'backlog:ec_detail' item.id %}" class="text-decoration-none">{{ item.reference }}</a>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-1">
+                                                {% for v in item.versions %}
+                                                    {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
+                                                    <span class="badge {% if forloop.last %}text-bg-dark{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
+                                                        {{ v }}
+                                                    </span>
+                                                {% empty %}
+                                                    <span class="text-muted small">Sem versões</span>
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if item.status == "approved" %}
+                                                <span class="badge text-bg-success">Aprovado</span>
+                                            {% elif item.status == "rejected" %}
+                                                <span class="badge text-bg-danger">Rejeitado</span>
+                                            {% elif item.status == "in_validation" %}
+                                                <span class="badge text-bg-warning text-dark">Em Validação</span>
+                                            {% elif item.status == "sent_to_des" %}
+                                                <span class="badge text-bg-info">Enviada para DES</span>
+                                            {% else %}
+                                                <span class="badge text-bg-secondary">{{ item.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-body-secondary small text-truncate" style="max-width: 18rem;">
+                                            {{ item.latest_comment|default:"Sem comentários." }}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-3">Nenhuma EC encontrada.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        {# --- Rejections needing action --- #}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6 text-danger">
-                Rejeitados — precisam da sua ação
-            </div>
-            <ul class="list-group list-group-flush">
-                {% for item in req.needs_action %}
-                <li class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <a href="{% url 'backlog:ec_detail' item.id %}" class="fw-semibold text-decoration-none">
-                            {{ item.reference }}
-                        </a>
-                        <small class="text-muted">
-                            v{{ item.version }} · {{ item.cd }} · {{ item.decided_at|date:"d/m/Y H:i" }}
-                        </small>
-                    </div>
-                    <div class="text-muted small mt-1">{{ item.comment|default:"Sem comentário." }}</div>
-                </li>
-                {% empty %}
-                <li class="list-group-item text-muted">Nada rejeitado — nada pendente da sua parte.</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        {# --- Recent uploads --- #}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">Últimos documentos</div>
-            <ul class="list-group list-group-flush">
-                {% for item in req.recent_versions %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>{{ item.reference }} <small class="text-muted">{{ item.version }}</small></span>
-                    <span>
-                        {% if item.decision == "approved" %}
-                        <span class="badge text-bg-success">Aprovado</span>
-                        {% elif item.decision == "rejected" %}
-                        <span class="badge text-bg-danger">Rejeitado</span>
-                        {% elif item.decision %}
-                        <span class="badge text-bg-secondary">{{ item.decision }}</span>
-                        {% else %}
-                        <span class="badge text-bg-warning">A aguardar CD</span>
-                        {% endif %}
-                    </span>
-                </li>
-                {% empty %}
-                <li class="list-group-item text-muted">Ainda não enviou documentos.</li>
-                {% endfor %}
-            </ul>
         </div>
 
         {{ req.by_status|json_script:"req-status" }}
@@ -212,13 +216,19 @@
     {% block extra_js %}
     <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
     <script>
-    const MUTED = "#667085";
-    const PALETTE = { in_validation: "#5b8def" };
+    const DARK = document.documentElement.getAttribute("data-bs-theme") === "dark";
+    const MUTED = DARK ? "#94A3B8" : "#667085";
+    const ACCENT = DARK ? "#3B82F6" : "#5b8def";
+    const AXIS_GRID = DARK ? "rgba(226, 232, 240, .08)" : "rgba(16, 24, 40, .07)";
+    const TOOLTIP_BG = DARK ? "#1E293B" : "#101828";
+    const DONUT_BORDER = DARK ? "#1E293B" : "#fff";
+    const POINT_CENTER = DARK ? "#1E293B" : "#fff";
+    const LINE_FILL = DARK ? "rgba(59, 130, 246, .16)" : "rgba(91, 141, 239, .16)";
     const barStyle = { borderRadius: 5, borderSkipped: false, maxBarThickness: 22 };
 
     Chart.defaults.font.size = 11;
     Chart.defaults.color = MUTED;
-    Chart.defaults.plugins.tooltip.backgroundColor = "#101828";
+    Chart.defaults.plugins.tooltip.backgroundColor = TOOLTIP_BG;
     Chart.defaults.plugins.tooltip.padding = 10;
     Chart.defaults.plugins.tooltip.cornerRadius = 6;
 
@@ -230,7 +240,7 @@
     const axis = {
         y: {
         beginAtZero: true, border: { display: false },
-        grid: { color: "rgba(16, 24, 40, .07)" }, ticks: { precision: 0, color: MUTED }
+        grid: { color: AXIS_GRID }, ticks: { precision: 0, color: MUTED }
         },
         x: {
         border: { display: false }, grid: { display: false },
@@ -253,13 +263,9 @@
         sent_to_des: "Enviada para DES",
         closed: "Fechada"
     };
-    const STATUS_COLOR = {
-        in_validation: "#5b8def",
-        approved: "#2fb344",
-        rejected: "#f04438",
-        sent_to_des: "#f79009",
-        closed: "#667085"
-    };
+    const STATUS_COLOR = DARK
+        ? { in_validation: "#3B82F6", approved: "#22C55E", rejected: "#EF4444", sent_to_des: "#F59E0B", closed: "#94A3B8" }
+        : { in_validation: "#5b8def", approved: "#2fb344", rejected: "#f04438", sent_to_des: "#f79009", closed: "#667085" };
 
     // ---------- Requester: doc status (donut) ----------
     whenPresent("req-status", "reqChartStatus", (canvas, docStatus) => {
@@ -270,7 +276,7 @@
             datasets: [{
             data: Object.values(docStatus),
             backgroundColor: Object.keys(docStatus).map(key => STATUS_COLOR[key] || "#cbd5e1"),
-            borderColor: "#fff",
+            borderColor: DONUT_BORDER,
             borderWidth: 2,
             hoverOffset: 8
             }]
@@ -288,7 +294,7 @@
             datasets: [{
             label: "Versões",
             data: docVersions.map(row => row.versions),
-            backgroundColor: PALETTE.in_validation,
+            backgroundColor: ACCENT,
             ...barStyle
             }]
         },
@@ -310,7 +316,7 @@
             datasets: [{
             data: Object.values(cdStatus),
             backgroundColor: Object.keys(cdStatus).map(key => STATUS_COLOR[key] || "#cbd5e1"),
-            borderColor: "#fff",
+            borderColor: DONUT_BORDER,
             borderWidth: 2,
             hoverOffset: 8
             }]
@@ -328,15 +334,15 @@
             datasets: [{
             label: "ECs",
             data: monthly.map(row => row.count),
-            borderColor: PALETTE.in_validation,
-            backgroundColor: "rgba(91, 141, 239, .16)",
+            borderColor: ACCENT,
+            backgroundColor: LINE_FILL,
             fill: true,
             tension: 0.4,
             borderWidth: 2.5,
             pointRadius: 3,
             pointHoverRadius: 6,
-            pointBackgroundColor: "#fff",
-            pointBorderColor: PALETTE.in_validation,
+            pointBackgroundColor: POINT_CENTER,
+            pointBorderColor: ACCENT,
             pointBorderWidth: 2
             }]
         },

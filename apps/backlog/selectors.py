@@ -1,5 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Count, F
+from django.db.models import Count, F, Q
 from django.db.models.functions import TruncMonth
 
 from apps.backlog.models import EC, Release
@@ -22,7 +22,7 @@ def open_releases_with_ec_count():
 
 def dashboard_stats(user) -> dict:
     """Aggregate counters rendered by the dashboard (spec `DASHBOARD.md`)."""
-    ec_qs = _visible_ecs(user)
+    ec_qs = visible_ecs(user)
     release_qs = _visible_releases(user)
 
     status_rows = ec_qs.values("status").annotate(n=Count("id"))
@@ -59,8 +59,10 @@ def dashboard_stats(user) -> dict:
     }
 
 
-def _visible_ecs(user):
-    """Every EC this user is allowed to count."""
+def visible_ecs(user):
+    """ECs this user is allowed to see: requester → own, cd → assigned,
+    des_team → sent to DES, everyone else → all (ARCHITECTURE §5: views
+    read this through selectors, never their own query)."""
     ecs = EC.objects.all()
     if user.role == "requester":
         return ecs.filter(requester=user)
@@ -69,6 +71,29 @@ def _visible_ecs(user):
     if user.role == "des_team":
         return ecs.filter(status=EC.Status.SENT_TO_DES)
     return ecs
+
+
+def search_ecs(queryset, q=None, status=None):
+    """RF12 — the toolbar filters above the EC list. `q` is free text over
+    reference, description and the EC id (year / year-sequence); `status`
+    matches `EC.Status` exactly. Both are optional and stack."""
+    q = (q or "").strip()
+    if q:
+        text = Q(reference__icontains=q) | Q(description__icontains=q)
+        # The table renders ids as "EC-2019-012", so users may type the prefix
+        # too. Strip an optional "EC-" (any case) before parsing year/sequence.
+        raw = q.removeprefix("EC-").removeprefix("ec-").strip()
+        year, sep, seq = raw.partition("-")
+        if year.isdigit():
+            if sep and seq.isdigit():
+                text |= Q(year=int(year), number_sequence=int(seq))
+            elif not sep:
+                text |= Q(year=int(year))
+                text |= Q(number_sequence=int(year))
+        queryset = queryset.filter(text)
+    if status:
+        queryset = queryset.filter(status=status)
+    return queryset
 
 
 def _visible_releases(user):
@@ -85,7 +110,11 @@ def requester_dashboard(user) -> dict:
     (`in_validation`, `approved`, `rejected`, `sent_to_des`, `closed`),
     excluding cancelled.
     """
-    ec_qs = EC.objects.filter(requester=user).exclude(status=EC.Status.CANCELLED)
+    ec_qs = (
+        EC.objects.filter(requester=user)
+        .exclude(status=EC.Status.CANCELLED)
+        .order_by("-year", "-number_sequence")
+    )
 
     rows = list(
         ec_qs.values(
@@ -112,6 +141,7 @@ def requester_dashboard(user) -> dict:
             bucket["versions"].append(row)
 
     by_status = {value: 0 for value, _label in EC.Status.choices if value != EC.Status.CANCELLED}
+    my_ecs = []
     needs_action = []
     versions_per_document = []
     total_versions = 0
@@ -147,8 +177,21 @@ def requester_dashboard(user) -> dict:
 
         if st in by_status:
             by_status[st] += 1
+        
+        version_list = [row["versions__version_number"] for row in versions]
+        latest_comment = latest["versions__review__comment"] if versions else ""
+
+        my_ecs.append({         
+            "id": ec_id,
+            "reference": data["reference"],
+            "status": st,
+            "versions_count": len(versions),
+            "versions": version_list,
+            "latest_comment": latest_comment,
+        })
 
     return {
+        "my_ecs": my_ecs,
         "ec_total": len(ecs),
         "versions_total": total_versions,
         "by_status": by_status,
