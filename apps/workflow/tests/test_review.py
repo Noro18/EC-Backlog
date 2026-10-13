@@ -1,6 +1,7 @@
 import pytest
 from django.core import mail
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
@@ -10,7 +11,7 @@ from apps.backlog.tests.factories import ECFactory, UserFactory
 from apps.documents.tests.factories import DocumentVersionFactory
 from apps.workflow.models import Review
 from apps.workflow.selectors import latest_version
-from apps.workflow.services import approve_ec, reject_ec
+from apps.workflow.services import approve_ec, reject_ec, resubmit_ec
 
 pytestmark = pytest.mark.django_db
 
@@ -123,9 +124,47 @@ class TestDecisionEmail:
 
 
 def _review_url(ec):
-    from django.urls import reverse
-
     return reverse("workflow:review_ec", args=[ec.pk])
+
+
+def _resubmit_url(ec):
+    return reverse("workflow:resubmit_ec", args=[ec.pk])
+
+
+class TestResubmitView:
+    def test_stranger_gets_forbidden(self, client):
+        ec, _requester, _cd = _rejected_ec()
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+
+        assert client.get(_resubmit_url(ec)).status_code == 403
+
+    def test_requester_gets_form(self, client):
+        ec, requester, _cd = _rejected_ec()
+        client.force_login(requester)
+
+        response = client.get(_resubmit_url(ec))
+
+        assert response.status_code == 200
+
+    def test_requester_can_resubmit_through_view(self, client):
+        ec, requester, cd = _rejected_ec()
+        client.force_login(requester)
+
+        response = client.post(
+            _resubmit_url(ec),
+            {
+                "document": SimpleUploadedFile("fix.pdf", b"fixed content"),
+                "change_reason": "added the missing diagram",
+                "responsible_cd": "",
+            },
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("backlog:ec_detail", args=[ec.pk])
+        ec.refresh_from_db()
+        assert ec.status == EC.Status.IN_VALIDATION
+        assert ec.versions.count() == 2
+        assert ec.responsible_cd_id == cd.pk
 
 
 class TestReviewView:
@@ -162,3 +201,58 @@ class TestReviewView:
         ec.refresh_from_db()
         assert ec.status == EC.Status.IN_VALIDATION
         assert Review.objects.count() == 0
+
+
+def _rejected_ec():
+    """Setup helper: EC with v1.0, rejected with a comment, owned by requester."""
+    requester = UserFactory(role=User.Role.REQUESTER)
+    cd = UserFactory(role=User.Role.CD)
+    ec = ECFactory(requester=requester, responsible_cd=cd)
+    DocumentVersionFactory(ec=ec, version_number="v1.0")
+    reject_ec(ec, cd, "Falta o diagrama unifilar")
+    return ec, requester, cd
+
+
+def _pdf(name="fix.pdf"):
+    return SimpleUploadedFile(name, b"fixed content")
+
+
+class TestResubmitEC:
+    def test_happy_path_creates_v11_and_reopens(self):
+        ec, requester, _cd = _rejected_ec()
+
+        version = resubmit_ec(ec, requester, _pdf(), "added the missing diagram")
+
+        assert version.version_number == "v1.1"
+        assert ec.versions.count() == 2
+        assert ec.status == EC.Status.IN_VALIDATION
+        old = ec.versions.get(version_number="v1.0")
+        assert old.review.decision == Review.Decision.REJECTED
+
+    def test_stranger_cannot_resubmit(self):
+        ec, _requester, _cd = _rejected_ec()
+        stranger = UserFactory(role=User.Role.REQUESTER)
+
+        with pytest.raises(PermissionDenied):
+            resubmit_ec(ec, stranger, _pdf(), "sneaky fix")
+
+        ec.refresh_from_db()
+        assert ec.status == EC.Status.REJECTED
+        assert ec.versions.count() == 1
+
+    def test_resubmit_wrong_status_fails(self):
+        ec, cd, _version = _ec_with_version()
+
+        with pytest.raises(ValidationError):
+            resubmit_ec(ec, cd, _pdf(), "nothing was rejected")
+
+        assert ec.versions.count() == 1
+
+    def test_cd_gets_mailed_on_resubmit(self):
+        ec, requester, cd = _rejected_ec()
+
+        with TestCase.captureOnCommitCallbacks(execute=True):
+            resubmit_ec(ec, requester, _pdf(), "added the missing diagram")
+
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [cd.email]

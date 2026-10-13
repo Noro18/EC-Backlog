@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Resubmit EC-{{ ec.ec_code }} — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h3 class="mb-1">Resubmit EC-{{ ec.ec_code }}</h3>
+        <p class="text-muted mb-0">{{ ec.reference }}</p>
+    </div>
+    <a href="{% url 'backlog:ec_detail' ec.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+{% if rejection_comment %}
+<div class="alert alert-warning">
+    <strong>O CD pediu correções:</strong> {{ rejection_comment }}
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-body fw-semibold">Nova versão do documento</div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.document.id_for_label }}">{{ form.document.label }} <span class="text-danger">*</span></label>
+                        {{ form.document }}
+                        {% for error in form.document.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.change_reason.id_for_label }}">{{ form.change_reason.label }} <span class="text-danger">*</span></label>
+                        {{ form.change_reason }}
+                        {% for error in form.change_reason.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.major_change }}
+                        <label class="form-check-label" for="{{ form.major_change.id_for_label }}">{{ form.major_change.label }}</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.responsible_cd.id_for_label }}">{{ form.responsible_cd.label }}</label>
+                        {{ form.responsible_cd }}
+                        {% for error in form.responsible_cd.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">Reenviar para validação</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
