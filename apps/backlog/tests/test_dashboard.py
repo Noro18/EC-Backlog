@@ -38,13 +38,11 @@ class TestDashboardAccess:
 
 
 class TestRolePlaceholders:
-    # The requester row is deliberately absent: its widgets are implemented,
-    # so it shows real content instead of a placeholder (see
-    # `TestRequesterDashboard` below).
+    # Requester and CD rows are absent: their widgets are implemented,
+    # so they show real content instead of a placeholder.
     @pytest.mark.parametrize(
         "role,expected",
         [
-            (User.Role.CD, "Widgets específicos do CD"),
             (User.Role.DES_TEAM, "Widgets específicos do DES Team"),
             (User.Role.ADMINISTRATOR, "Widgets específicos do Administrador"),
         ],
