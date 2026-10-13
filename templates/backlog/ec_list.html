@@ -10,7 +10,7 @@
         <h3 class="mb-1">Gestão de ECs</h3>
         <p class="text-muted mb-0">Lista de todas as Especificação Configuração registadas no sistema.</p>
     </div>
-    {% if request.user.is_authenticated and request.user.role != 'cd' and request.user.role != 'team_des' and request.user.role != 'administrator'%}
+    {% if request.user.is_authenticated and request.user.role != 'cd' and request.user.role != 'des_team' and request.user.role != 'administrator'%}
         <a href="{% url 'backlog:ec_form' %}" class="btn btn-info fw-semibold">
             <i class="bi bi-plus-circle"></i> Nova Solicitação
         </a>
