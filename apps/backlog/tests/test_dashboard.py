@@ -236,6 +236,7 @@ class TestRequesterDashboard:
         assert response.status_code == 200
         assert "req" in response.context
         assert "Documentos por estado" in html
-        assert "precisam da sua ação" in html
+        # The rejections card was deliberately removed from the dashboard.
+        assert "precisam da sua ação" not in html
         # The placeholder must be gone once the real widgets are in place.
         assert "em construção" not in html

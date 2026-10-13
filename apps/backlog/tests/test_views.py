@@ -378,20 +378,25 @@ class TestNewECRoleGate:
         assert response.status_code == 302
         assert EC.objects.filter(reference="CR-ADM-001").exists()
 
-    def test_sidebar_shows_link_for_requester_admin_not_cd(self, client):
-        requester_user = UserFactory(role=User.Role.REQUESTER)
-        admin_user = UserFactory(role=User.Role.ADMINISTRATOR)
-        client.force_login(requester_user)
+    def test_sidebar_shows_link_for_requester_only(self, client):
+        # The sidebar "Nova Solicitação" link belongs to the requester
+        # section only; admins create ECs through the button on ec_list.
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
         response_requester = client.get(reverse("backlog:release_list"))
         assert reverse("backlog:ec_form") in response_requester.content.decode()
 
-        client.force_login(admin_user)
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
         response_admin = client.get(reverse("backlog:release_list"))
-        assert reverse("backlog:ec_form") in response_admin.content.decode()
+        assert reverse("backlog:ec_form") not in response_admin.content.decode()
 
         client.force_login(UserFactory(role=User.Role.CD))
         response_cd = client.get(reverse("backlog:release_list"))
         assert reverse("backlog:ec_form") not in response_cd.content.decode()
+
+    def test_admin_sees_new_ec_button_on_ec_list(self, client):
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+        response = client.get(reverse("backlog:ec_list"))
+        assert reverse("backlog:ec_form") in response.content.decode()
 
 
 class TestNewECForm:

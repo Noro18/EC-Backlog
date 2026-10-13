@@ -126,30 +126,6 @@
             </div>
         </div>
 
-        {# --- Rejections needing action --- #}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6 text-danger">
-                Rejeitados — precisam da sua ação
-            </div>
-            <ul class="list-group list-group-flush">
-                {% for item in req.needs_action %}
-                <li class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <a href="{% url 'backlog:ec_detail' item.id %}" class="fw-semibold text-decoration-none">
-                            {{ item.reference }}
-                        </a>
-                        <small class="text-muted">
-                            v{{ item.version }} · {{ item.cd }} · {{ item.decided_at|date:"d/m/Y H:i" }}
-                        </small>
-                    </div>
-                    <div class="text-muted small mt-1">{{ item.comment|default:"Sem comentário." }}</div>
-                </li>
-                {% empty %}
-                <li class="list-group-item text-muted">Nada rejeitado — nada pendente da sua parte.</li>
-                {% endfor %}
-            </ul>
-        </div>
-
         {{ req.by_status|json_script:"req-status" }}
         {{ req.versions_per_document|json_script:"req-versions" }}
 
