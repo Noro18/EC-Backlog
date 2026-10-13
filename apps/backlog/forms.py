@@ -19,12 +19,18 @@ class CDChoiceField(forms.ModelChoiceField):
 class ECCreateForm(forms.ModelForm):
     """EC_CREATE.md Decision 1: validation lives here, saving lives in the service."""
 
+    REFERENCE_PREFIXES = ("CR", "RT", "COR")
+
     class Meta:
         model = EC
         fields = ["reference", "description", "release", "responsible_cd"]
         widgets = {
             "reference": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "ex.: CR2026042"}
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "ex.: CR2026042",
+                    "autocomplete": "off",
+                }
             ),
             "description": forms.Textarea(
                 attrs={
@@ -34,6 +40,11 @@ class ECCreateForm(forms.ModelForm):
                 }
             ),
         }
+
+    # SRD § 7: reference stays ONE free-text CharField on EC (no model change,
+    # no invented format rule). The CR/RT/COR suggestions are a pure UX helper
+    # (RNF05): small JS in ec_form.html inserts the picked prefix into the
+    # same input, then the user types the number.
 
     # The model allows null/blank (imported history has empty FKs), but a NEW
     # EC must have a release and a CD — required=True is the form's contract.

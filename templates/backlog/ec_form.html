@@ -17,10 +17,15 @@
         {% csrf_token %}
         <div class="mb-3">
           <label class="form-label" for="{{ form.reference.id_for_label }}">Referência (CR / RT / COR) <span class="text-danger">*</span></label>
-          <div class="input-group">
-            <span class="input-group-text bg-body"><i class="bi bi-hash"></i></span>
+          <div id="reference-field-wrap" class="position-relative">
             {{ form.reference }}
+            <div id="reference-suggestions" class="list-group position-absolute w-100 shadow d-none" style="z-index: 1050;">
+              {% for prefix in form.REFERENCE_PREFIXES %}
+              <button type="button" class="list-group-item list-group-item-action" data-prefix="{{ prefix }}">{{ prefix }}</button>
+              {% endfor %}
+            </div>
           </div>
+          
           {% for error in form.reference.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
         </div>
         <div class="mb-3">
@@ -62,4 +67,52 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var input = document.getElementById("{{ form.reference.id_for_label }}");
+  var panel = document.getElementById("reference-suggestions");
+  if (!input || !panel) return;
+  var prefixes = [];
+  panel.querySelectorAll("[data-prefix]").forEach(function (btn) {
+    prefixes.push(btn.getAttribute("data-prefix"));
+  });
+
+  function show() { panel.classList.remove("d-none"); }
+  function hide() { panel.classList.add("d-none"); }
+
+  function applyPrefix(prefix) {
+    var value = input.value.replace(/^\s+/, "");
+    var upper = value.toUpperCase();
+    for (var i = 0; i < prefixes.length; i++) {
+      if (upper.indexOf(prefixes[i]) === 0) {
+        value = value.slice(prefixes[i].length);
+        break;
+      }
+    }
+    input.value = prefix + value.replace(/^\s+/, "");
+    input.focus();
+    try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+  }
+
+  input.addEventListener("focus", show);
+  input.addEventListener("click", show);
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") hide();
+  });
+  panel.addEventListener("mousedown", function (e) {
+    var btn = e.target.closest("[data-prefix]");
+    if (btn) {
+      e.preventDefault();
+      applyPrefix(btn.getAttribute("data-prefix"));
+      hide();
+    }
+  });
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest("#reference-field-wrap")) hide();
+  });
+})();
+</script>
 {% endblock %}

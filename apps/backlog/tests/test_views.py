@@ -580,6 +580,41 @@ class TestNewECForm:
         assert EC.objects.count() == 0
 
 
+class TestReferencePrefixSuggestions:
+    """Single reference input + CR/RT/COR suggestions on click (RNF05)."""
+
+    @staticmethod
+    def _login_requester(client):
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+
+    def test_get_renders_single_input_with_prefix_suggestions(self, client):
+        self._login_requester(client)
+        html = client.get(reverse("backlog:ec_form")).content.decode()
+        assert 'name="reference"' in html
+        assert 'name="reference_prefix"' not in html
+        assert 'name="reference_number"' not in html
+        for prefix in ("CR", "RT", "COR"):
+            assert f'data-prefix="{prefix}"' in html
+
+    def test_post_full_reference_creates_ec(self, client):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        release = ReleaseFactory()
+        client.force_login(requester)
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "RT2026042",
+                "description": "Trocar o resistor R12",
+                "release": release.pk,
+                "responsible_cd": cd.pk,
+            },
+        )
+        assert response.status_code == 302
+        assert EC.objects.get().reference == "RT2026042"
+
+
 def _upload(ec, version, change_reason=""):
     """Attach a document version through the reverse manager (no documents import)."""
     return ec.versions.create(
