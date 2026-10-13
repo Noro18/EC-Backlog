@@ -13,7 +13,7 @@ class ReleaseChoiceField(forms.ModelChoiceField):
 
 class CDChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return f"{obj.full_name} ({obj.username})"
+        return obj.full_name or obj.username
 
 
 class ECCreateForm(forms.ModelForm):

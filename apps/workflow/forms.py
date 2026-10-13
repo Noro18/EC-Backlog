@@ -5,7 +5,7 @@ from apps.accounts.models import User  # workflow → accounts: downward, allowe
 
 class CDChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return f"{obj.full_name} ({obj.username})"
+        return obj.full_name or obj.username
 
 
 class ReviewForm(forms.Form):
