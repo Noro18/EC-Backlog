@@ -202,4 +202,46 @@ class ECRequesterTable(tables.Table):
         fields = ("ec_code", "versions", "status", "latest_comment")
         attrs = {"class": "table table-hover align-middle mb-0"}
         empty_text = "Nenhuma EC encontrada."
+
+
+class CDPendingReviewTable(tables.Table):
+    ec_code = tables.TemplateColumn(
+        verbose_name="Referencia",
+        orderable=False,
+        template_code="""<a href="{% url 'backlog:ec_detail' record.id %}" class="text-decoration-none">{{ record.reference }}</a>""",
+    )
+    versions = tables.TemplateColumn(
+        verbose_name="Versões",
+        orderable=False,
+        template_code="""
+            <div class="d-flex align-items-center gap-1">
+                {% for v in record.versions %}
+                    {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
+                    <span class="badge {% if forloop.last %}text-bg-dark{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
+                        {{ v }}
+                    </span>
+                {% empty %}
+                    <span class="text-muted small">Sem versões</span>
+                {% endfor %}
+            </div>
+        """,
+    )
+
+    uploaded_at = tables.TemplateColumn(
+        verbose_name="Enviado em",
+        orderable=False,
+        template_code="""<small class="text-muted">{{ record.uploaded_at|date:"d/m/Y H:i" }}</small>""",
+    )
+
+
+    actions = tables.TemplateColumn(
+        verbose_name="Ações",
+        orderable=False,
+        template_code="""<a href="{% url 'backlog:ec_detail' record.id %}" class="btn btn-sm btn-outline-primary">Ver Detalhes</a>""",
+        attrs={"th": {"class": "text-end"}, "td": {"class": "text-end"}},
+    )
     
+    class Meta:
+        fields = ("ec_code", "versions", "uploaded_at", "actions") 
+        attrs = {"class": "table table-hover align-middle mb-0"}
+        empty_text = "Nenhum EC pendente de revisão."

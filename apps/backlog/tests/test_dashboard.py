@@ -242,9 +242,9 @@ class TestRequesterDashboard:
 
 
 class TestDesTeamDashboard:
-    def test_des_team_dashboard_lists_sent_ecs(self):
+    def test_des_team_dashboard_lists_routed_ecs(self):
         des_user = UserFactory(role=User.Role.DES_TEAM)
-        ECFactory(status=EC.Status.SENT_TO_DES, reference="DES2026001")
+        ECFactory(status=EC.Status.CLOSED, reference="DES2026001")
 
         data = des_team_dashboard(des_user)
 
@@ -253,7 +253,7 @@ class TestDesTeamDashboard:
 
     def test_page_renders_des_team_widgets(self, client):
         user = UserFactory(role=User.Role.DES_TEAM)
-        ECFactory(status=EC.Status.SENT_TO_DES, reference="DES2026002")
+        ECFactory(status=EC.Status.CLOSED, reference="DES2026002")
         client.force_login(user)
 
         response = client.get(reverse("backlog:dashboard"))

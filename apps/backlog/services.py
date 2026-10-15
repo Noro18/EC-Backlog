@@ -1,6 +1,4 @@
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import transaction
-from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
