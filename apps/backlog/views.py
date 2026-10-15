@@ -82,11 +82,14 @@ class NewECView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         failed_on = "release"
         try:
             with transaction.atomic():
+                release = form.cleaned_data["release"]
+                if form.wants_new_release:
+                    release = create_release()  # RF02 on-demand; rolls back with the EC
                 ec = create_ec(
                     requester=self.request.user,
                     reference=form.cleaned_data["reference"],
                     description=form.cleaned_data["description"],
-                    release=form.cleaned_data["release"],
+                    release=release,
                     responsible_cd=form.cleaned_data["responsible_cd"],
                 )
                 if file := self.request.FILES.get("document"):

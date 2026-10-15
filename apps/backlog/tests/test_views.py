@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.backlog.models import EC, Release
+from apps.backlog.services import NEW_RELEASE
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 from apps.documents.models import DocumentVersion
 
@@ -583,6 +584,112 @@ class TestNewECForm:
         assert "document" in response.context["form"].errors
         assert DocumentVersion.objects.count() == 0
         assert EC.objects.count() == 0
+
+
+class TestReleaseOnDemand:
+    """RELEASE_CREATE_ON_DEMAND.md (RF02): '+ Kria Release Foun' in the dropdown."""
+
+    @staticmethod
+    def _login_requester(client):
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+
+    def test_dropdown_lists_new_option_last(self, client):
+        year = timezone.localdate().year
+        release = ReleaseFactory(year=year, number_sequence=1)
+        self._login_requester(client)
+
+        html = client.get(reverse("backlog:ec_form")).content.decode()
+
+        assert f'value="{NEW_RELEASE}"' in html
+        assert "+ Kria Release Foun" in html
+        assert html.index(release.release_code) < html.index(NEW_RELEASE)
+
+    def test_new_option_creates_next_release(self, client):
+        year = timezone.localdate().year
+        old = ReleaseFactory(year=year, number_sequence=3)
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        client.force_login(requester)
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "CR2026042",
+                "description": "Precisa release foun",
+                "release": NEW_RELEASE,
+                "responsible_cd": cd.pk,
+            },
+        )
+
+        assert response.status_code == 302
+        ec = EC.objects.get()
+        assert ec.release.release_code == f"TT_ON_{year}-004"
+        assert old.ecs.count() == 0
+
+    def test_new_option_despite_room_in_old_releases(self, client):
+        year = timezone.localdate().year
+        roomy = ReleaseFactory(year=year, number_sequence=1)
+        ECFactory(release=roomy, year=year, number_sequence=1)
+        ECFactory(release=roomy, year=year, number_sequence=2)
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        client.force_login(requester)
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "CR2026043",
+                "description": "Hakarak foun maski tuan mamuk",
+                "release": NEW_RELEASE,
+                "responsible_cd": cd.pk,
+            },
+        )
+
+        assert response.status_code == 302
+        ec = EC.objects.latest("id")
+        assert ec.release.release_code == f"TT_ON_{year}-002"
+        assert roomy.ecs.count() == 2
+
+    def test_new_release_appears_in_dropdown_afterwards(self, client):
+        year = timezone.localdate().year
+        ReleaseFactory(year=year, number_sequence=3)
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        client.force_login(requester)
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "CR2026045",
+                "description": "Depois haree iha dropdown",
+                "release": NEW_RELEASE,
+                "responsible_cd": cd.pk,
+            },
+        )
+        assert response.status_code == 302
+
+        html = client.get(reverse("backlog:ec_form")).content.decode()
+        assert f"TT_ON_{year}-004 (aberta" in html
+
+    def test_garbage_release_is_rejected(self, client):
+        ReleaseFactory()
+        self._login_requester(client)
+        count_before = Release.objects.count()
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "CR2026044",
+                "description": "Release falsu",
+                "release": "999999",
+                "responsible_cd": UserFactory(role=User.Role.CD).pk,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.context["form"].errors
+        assert EC.objects.count() == 0
+        assert Release.objects.count() == count_before
 
 
 class TestReferencePrefixSuggestions:

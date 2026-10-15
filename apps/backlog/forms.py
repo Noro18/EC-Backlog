@@ -4,11 +4,19 @@ from apps.accounts.models import User
 
 from .models import EC
 from .selectors import open_releases_with_ec_count
+from .services import NEW_RELEASE
 
 
 class ReleaseChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f"{obj.release_code} (aberta — {obj.ec_total}/{obj.capacity})"
+
+    def to_python(self, value):
+        # "+ Kria Release Foun" is not a Release row — let it through so
+        # clean/validators see the sentinel instead of an invalid_choice.
+        if value == NEW_RELEASE:
+            return NEW_RELEASE
+        return super().to_python(value)
 
 
 class CDChoiceField(forms.ModelChoiceField):
@@ -54,6 +62,27 @@ class ECCreateForm(forms.ModelForm):
         empty_label=None,
         widget=forms.Select(attrs={"class": "form-select"}),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Fresh open-Releases per form (never a stale shared queryset) plus
+        # the on-demand option last (RF02). Plain list: no re-query on render.
+        release_field = self.fields["release"]
+        release_field.queryset = open_releases_with_ec_count()
+        release_field.choices = [*release_field.choices, (NEW_RELEASE, "+ Kria Release Foun")]
+
+    # Set by clean_release(); read by NewECView. ModelForm._post_clean assigns
+    # every cleaned value onto the EC instance, so the sentinel string must
+    # never survive in cleaned_data["release"] (FK rejects non-instances).
+    wants_new_release = False
+
+    def clean_release(self):
+        value = self.cleaned_data.get("release")
+        if value == NEW_RELEASE:
+            self.wants_new_release = True
+            return None
+        return value
+
     responsible_cd = CDChoiceField(
         queryset=User.objects.filter(role=User.Role.CD),
         label="Atribuir a CD",
