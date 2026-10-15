@@ -37,7 +37,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Only the requester pays for this extra query; the other roles never
         # read `req`, so we skip it entirely rather than render an empty dict.
         if self.request.user.role == "requester":
-            context["req"] = requester_dashboard(self.request.user)
+            context["req"] = requester_dashboard(self.request.user) #requester_dashboard ne mai husi file selector.py
         elif self.request.user.role == "cd":
             context["cd"] = cd_dashboard(self.request.user)
         return context
@@ -51,7 +51,7 @@ class ECListView(LoginRequiredMixin, SingleTableView):
     def get_queryset(self):
         params = self.request.GET
         return search_ecs(
-            visible_ecs(self.request.user),
+            visible_ecs(self.request.user), # function visible_ecs ida ne'e bolu husi file selector.py
             q=params.get("q"),
             status=params.get("status"),
         )
@@ -147,3 +147,5 @@ class ReleaseDetailView(DetailView):
         context["status_badge_class"] = RELEASE_BADGE_CLASSES[release.status_label]
         RequestConfig(self.request).configure(context["ec_table"])
         return context
+
+

@@ -209,6 +209,21 @@
         {{ cd.ec_by_status|json_script:"cd-status" }}
         {{ cd.ec_by_month|json_script:"cd-month" }}
 
+
+    {% elif user.role == 'des_team' %}
+    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-tools fs-1 d-block mb-2"></i>
+            <div class="fw-semibold">Widgets específicos do DES Team — em construção</div>
+        </div>
+    </div>
+    {% elif user.role == 'administrator' %}
+    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-tools fs-1 d-block mb-2"></i>
+            <div class="fw-semibold">Widgets específicos do Administrador — em construção</div>
+        </div>
+    </div>
     {% endif %}
 </div>
     {% endblock %}

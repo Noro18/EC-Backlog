@@ -379,20 +379,25 @@ class TestNewECRoleGate:
         assert response.status_code == 302
         assert EC.objects.filter(reference="CR-ADM-001").exists()
 
-    def test_sidebar_shows_link_for_requester_admin_not_cd(self, client):
-        requester_user = UserFactory(role=User.Role.REQUESTER)
-        admin_user = UserFactory(role=User.Role.ADMINISTRATOR)
-        client.force_login(requester_user)
+    def test_sidebar_shows_link_for_requester_only(self, client):
+        # The sidebar "Nova Solicitação" link belongs to the requester
+        # section only; admins create ECs through the button on ec_list.
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
         response_requester = client.get(reverse("backlog:release_list"))
         assert reverse("backlog:ec_form") in response_requester.content.decode()
 
-        client.force_login(admin_user)
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
         response_admin = client.get(reverse("backlog:release_list"))
-        assert reverse("backlog:ec_form") in response_admin.content.decode()
+        assert reverse("backlog:ec_form") not in response_admin.content.decode()
 
         client.force_login(UserFactory(role=User.Role.CD))
         response_cd = client.get(reverse("backlog:release_list"))
         assert reverse("backlog:ec_form") not in response_cd.content.decode()
+
+    def test_admin_sees_new_ec_button_on_ec_list(self, client):
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+        response = client.get(reverse("backlog:ec_list"))
+        assert reverse("backlog:ec_form") in response.content.decode()
 
 
 class TestNewECForm:
@@ -685,6 +690,41 @@ class TestReleaseOnDemand:
         assert response.context["form"].errors
         assert EC.objects.count() == 0
         assert Release.objects.count() == count_before
+
+
+class TestReferencePrefixSuggestions:
+    """Single reference input + CR/RT/COR suggestions on click (RNF05)."""
+
+    @staticmethod
+    def _login_requester(client):
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+
+    def test_get_renders_single_input_with_prefix_suggestions(self, client):
+        self._login_requester(client)
+        html = client.get(reverse("backlog:ec_form")).content.decode()
+        assert 'name="reference"' in html
+        assert 'name="reference_prefix"' not in html
+        assert 'name="reference_number"' not in html
+        for prefix in ("CR", "RT", "COR"):
+            assert f'data-prefix="{prefix}"' in html
+
+    def test_post_full_reference_creates_ec(self, client):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        release = ReleaseFactory()
+        client.force_login(requester)
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "RT2026042",
+                "description": "Trocar o resistor R12",
+                "release": release.pk,
+                "responsible_cd": cd.pk,
+            },
+        )
+        assert response.status_code == 302
+        assert EC.objects.get().reference == "RT2026042"
 
 
 def _upload(ec, version, change_reason=""):
