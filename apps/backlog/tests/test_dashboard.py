@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from apps.backlog.models import EC
-from apps.backlog.selectors import dashboard_stats, requester_dashboard
+from apps.backlog.selectors import dashboard_stats, des_team_dashboard, requester_dashboard
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -38,12 +38,11 @@ class TestDashboardAccess:
 
 
 class TestRolePlaceholders:
-    # Requester and CD rows are absent: their widgets are implemented,
+    # Requester, CD, and DES Team rows are absent: their widgets are implemented,
     # so they show real content instead of a placeholder.
     @pytest.mark.parametrize(
         "role,expected",
         [
-            (User.Role.DES_TEAM, "Widgets específicos do DES Team"),
             (User.Role.ADMINISTRATOR, "Widgets específicos do Administrador"),
         ],
     )
@@ -240,3 +239,28 @@ class TestRequesterDashboard:
         assert "precisam da sua ação" not in html
         # The placeholder must be gone once the real widgets are in place.
         assert "em construção" not in html
+
+
+class TestDesTeamDashboard:
+    def test_des_team_dashboard_lists_sent_ecs(self):
+        des_user = UserFactory(role=User.Role.DES_TEAM)
+        ECFactory(status=EC.Status.SENT_TO_DES, reference="DES2026001")
+
+        data = des_team_dashboard(des_user)
+
+        assert data["sent_total"] == 1
+        assert data["sent_ecs"][0]["reference"] == "DES2026001"
+
+    def test_page_renders_des_team_widgets(self, client):
+        user = UserFactory(role=User.Role.DES_TEAM)
+        ECFactory(status=EC.Status.SENT_TO_DES, reference="DES2026002")
+        client.force_login(user)
+
+        response = client.get(reverse("backlog:dashboard"))
+        html = response.content.decode()
+
+        assert response.status_code == 200
+        assert "des" in response.context
+        assert "DES2026002" in html
+        assert "em construção" not in html
+
