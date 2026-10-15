@@ -1,16 +1,16 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
-from django.views.generic import FormView
+from django.views.generic import FormView, View
 
 from apps.backlog.models import EC
 
 from .forms import ResubmitForm, ReviewForm
 from .models import Review
 from .selectors import latest_version
-from .services import approve_ec, reject_ec, resubmit_ec
+from .services import approve_ec, reject_ec, resubmit_ec, route_to_des
 
 
 class ReviewECView(LoginRequiredMixin, UserPassesTestMixin, FormView):
@@ -103,3 +103,24 @@ class ResubmitECView(LoginRequiredMixin, UserPassesTestMixin, FormView):
 
     def get_success_url(self):
         return reverse("backlog:ec_detail", args=[self.ec.pk])
+
+
+class RouteToDESView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """RF11: route an approved EC to DES. POST-only — no get() exists,
+    so GET → 405 and routing can never fire by link or prefetch."""
+
+    def dispatch(self, request, *args, **kwargs):
+        self.ec = get_object_or_404(EC, pk=self.kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def test_func(self):
+        return self.request.user.pk == self.ec.requester_id and self.ec.status == EC.Status.APPROVED
+
+    def post(self, request, *args, **kwargs):
+        try:
+            route_to_des(self.ec, request.user)
+        except (ValidationError, PermissionDenied) as error:
+            messages.error(request, getattr(error, "messages", str(error)))
+        else:
+            messages.success(request, f"EC {self.ec.ec_code} enviada ao DES.")
+        return redirect("backlog:ec_detail", pk=self.ec.pk)
