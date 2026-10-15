@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Enviar EC-{{ ec.ec_code }} para DES — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h3 class="mb-1">Enviar EC-{{ ec.ec_code }} para a equipa DES</h3>
+        <p class="text-muted mb-0">{{ ec.reference }} — versão {{ latest_version_number|default:"(sem versão)" }}</p>
+    </div>
+    <a href="{% url 'backlog:ec_detail' ec.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-body fw-semibold">Confirmar encaminhamento</div>
+            <div class="card-body">
+                <p class="mb-3">
+                    Esta EC aprovada será encaminhada para a equipa DES
+                    {% if ec.release %}na release <strong>{{ ec.release.release_code }}</strong>{% endif %}.
+                    A equipa DES será notificada por email.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Enviar para DES
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

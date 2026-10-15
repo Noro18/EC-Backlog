@@ -7,10 +7,10 @@ from django.views.generic import FormView
 
 from apps.backlog.models import EC
 
-from .forms import ResubmitForm, ReviewForm
+from .forms import ResubmitForm, ReviewForm, RouteToDESForm
 from .models import Review
 from .selectors import latest_version
-from .services import approve_ec, reject_ec, resubmit_ec
+from .services import approve_ec, reject_ec, resubmit_ec, route_to_des
 
 
 class ReviewECView(LoginRequiredMixin, UserPassesTestMixin, FormView):
@@ -99,6 +99,42 @@ class ResubmitECView(LoginRequiredMixin, UserPassesTestMixin, FormView):
             form.add_error(None, getattr(error, "messages", str(error)))
             return self.form_invalid(form)
         messages.success(self.request, f"EC {self.ec.ec_code} reenviada para validação.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("backlog:ec_detail", args=[self.ec.pk])
+
+
+class RouteToDESView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    """RF11: the approving CD forwards an approved EC to the DES team."""
+
+    form_class = RouteToDESForm
+    template_name = "workflow/route_to_des.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.ec = get_object_or_404(EC, pk=self.kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def test_func(self):
+        return (
+            self.request.user.pk == self.ec.responsible_cd_id
+            and self.ec.status == EC.Status.APPROVED
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["ec"] = self.ec
+        version = latest_version(self.ec)
+        context["latest_version_number"] = version.version_number if version else None
+        return context
+
+    def form_valid(self, form):
+        try:
+            route_to_des(self.ec, self.request.user)
+        except (ValidationError, PermissionDenied) as error:
+            form.add_error(None, getattr(error, "messages", str(error)))
+            return self.form_invalid(form)
+        messages.success(self.request, f"EC {self.ec.ec_code} enviada para a equipa DES.")
         return super().form_valid(form)
 
     def get_success_url(self):

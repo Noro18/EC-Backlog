@@ -81,3 +81,7 @@ class ResubmitForm(forms.Form):
         if not reason:
             raise forms.ValidationError("Descreva o que mudou nesta versão.")
         return reason
+
+
+class RouteToDESForm(forms.Form):
+    """RF11 routing confirm form: no fields — POST means "yes, route it"."""
