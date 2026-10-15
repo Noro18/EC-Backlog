@@ -1,7 +1,8 @@
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.accounts.models import User
 from apps.backlog.models import EC, Release
 
 
@@ -37,3 +38,17 @@ def create_ec(
             creation_date=timezone.localdate(),
         )
         return ec
+
+
+def record_go_live(release: Release, user, go_live_date=None) -> Release:
+    """RF04: a requester records the go-live date on a closed Release.
+    Overwriting is allowed (corrections happen); auditlog records it."""
+    if release.is_open:
+        raise ValidationError("Go-live can only be recorded on a closed Release.")
+    if user.role != User.Role.REQUESTER:
+        raise PermissionDenied("Only a requester can record the go-live date.")
+    if go_live_date is None:
+        raise ValidationError("A go-live date is required.")
+    release.production_go_live_date = go_live_date
+    release.save(update_fields=["production_go_live_date"])
+    return release
