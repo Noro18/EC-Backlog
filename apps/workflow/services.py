@@ -6,7 +6,7 @@ from apps.backlog.models import EC
 from apps.documents.models import DocumentVersion  # workflow → documents: downward, allowed
 from apps.documents.services import create_next_version
 from apps.workflow.models import Review
-from apps.workflow.notifications import queue_cd_assigned, queue_decision_made
+from apps.workflow.notifications import queue_cd_assigned, queue_decision_made, queue_routed_to_des
 from apps.workflow.selectors import latest_version
 
 
@@ -87,3 +87,16 @@ def resubmit_ec(ec, user, file, change_reason="", major=False, responsible_cd=No
         ec.save(update_fields=["responsible_cd", "status"])
         queue_cd_assigned(ec)
     return version
+
+
+def route_to_des(ec: EC, user) -> EC:
+    """RF11: the approving CD forwards an approved EC to the DES team."""
+    if ec.status != EC.Status.APPROVED:
+        raise ValidationError("Only an approved EC can be routed to the DES team.")
+    if user.pk != ec.responsible_cd_id:
+        raise PermissionDenied("Only the approving CD can route this EC to DES.")
+    with transaction.atomic():
+        ec.status = EC.Status.SENT_TO_DES
+        ec.save(update_fields=["status"])
+        queue_routed_to_des(ec)
+    return ec
