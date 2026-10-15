@@ -4,6 +4,7 @@ from django.db import transaction
 from django.urls import reverse
 from django_q.tasks import async_task
 
+from apps.accounts.models import User  # workflow → accounts: downward, allowed
 from apps.backlog.models import EC  # workflow → backlog: downward, always allowed
 from apps.workflow.models import Review
 from apps.workflow.selectors import latest_version
@@ -87,3 +88,41 @@ def send_decision_email(ec_id: int) -> None:
         f"Ver detalhes: {link}\n"
     )
     send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [requester.email])
+
+
+def queue_des_routed(ec) -> None:
+    """RF11: after the routing transaction commits, enqueue the DES email."""
+    transaction.on_commit(lambda: async_task(send_des_routed_email, ec.pk))
+
+
+def send_des_routed_email(ec_id: int) -> None:
+    """django-q2 task: re-fetch the EC, mail every DES-team user. Never raise."""
+    try:
+        ec = EC.objects.select_related("requester", "responsible_cd").get(pk=ec_id)
+    except EC.DoesNotExist:
+        return  # EC deleted before the worker ran — nothing to notify about
+    recipients = list(
+        User.objects.filter(role=User.Role.DES_TEAM)
+        .exclude(email="")
+        .values_list("email", flat=True)
+    )
+    if not recipients:
+        return  # nobody in DES to tell — skip instead of crashing the worker
+    link = f"{settings.SITE_URL.rstrip('/')}{reverse('backlog:ec_detail', args=[ec.pk])}"
+    cd = ec.responsible_cd
+    requester = ec.requester
+    subject = f"EC {ec.ec_code}: enviada ao DES"
+    body = (
+        f"Olá,\n"
+        f"\n"
+        f"Uma especificação aprovada foi enviada ao DES para implementação.\n"
+        f"\n"
+        f"EC: EC-{ec.ec_code}\n"
+        f"Referência: {ec.reference}\n"
+        f"Descrição: {ec.description}\n"
+        f"CD que aprovou: {cd.full_name or cd.username if cd else '-'}\n"
+        f"Enviada por: {requester.full_name or requester.username if requester else '-'}\n"
+        f"\n"
+        f"Ver detalhes: {link}\n"
+    )
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
