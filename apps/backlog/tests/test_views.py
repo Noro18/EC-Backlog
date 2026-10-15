@@ -79,13 +79,13 @@ class TestReleaseList:
 
         assert "Concluído" in html
 
-    def test_closed_and_full_renders_lotado(self, client):
+    def test_closed_and_full_renders_concluido(self, client):
         release = ReleaseFactory(capacity=2, is_open=False)
         ECFactory(release=release)
         ECFactory(release=release)
         html = client.get(reverse("backlog:release_list")).content.decode()
 
-        assert "Lotado" in html
+        assert "Concluído" in html
 
     def test_badge_palette_matches_spec(self, client):
         open_release = ReleaseFactory(capacity=3)
@@ -149,14 +149,14 @@ class TestECListVisibility:
         assert first.reference in page
         assert second.reference in page
 
-    def test_des_team_only_sees_ecs_sent_to_des(self, client):
+    def test_des_team_only_sees_closed_ecs(self, client):
         self._login(client, User.Role.DES_TEAM)
-        sent = ECFactory(status=EC.Status.SENT_TO_DES)
+        closed = ECFactory(status=EC.Status.CLOSED)
         still_validating = ECFactory(status=EC.Status.IN_VALIDATION)
 
         page = client.get(reverse("backlog:ec_list")).content.decode()
 
-        assert sent.reference in page
+        assert closed.reference in page
         assert still_validating.reference not in page
 
     def test_anonymous_users_are_redirected_to_login(self, client):
@@ -270,8 +270,8 @@ class TestReleaseDetail:
         response = client.get(reverse("backlog:release_detail", args=[release.pk]))
         html = response.content.decode()
 
-        assert "Lotado" in html
-        assert '<span class="badge text-bg-danger">Lotado</span>' in html
+        assert "Concluído" in html
+        assert '<span class="badge text-bg-secondary">Concluído</span>' in html
 
     def test_shows_only_this_releases_ecs(self, client):
         mine = ReleaseFactory()

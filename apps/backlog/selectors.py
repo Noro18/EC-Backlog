@@ -61,15 +61,15 @@ def dashboard_stats(user) -> dict:
 
 def visible_ecs(user):
     """ECs this user is allowed to see: requester → own, cd → assigned,
-    des_team → sent to DES, everyone else → all (ARCHITECTURE §5: views
-    read this through selectors, never their own query)."""
+    des_team → closed (routed ECs skip sent_to_des), everyone else → all
+    (ARCHITECTURE §5: views read this through selectors, never their own query)."""
     ecs = EC.objects.all()
     if user.role == "requester":
         return ecs.filter(requester=user)
     if user.role == "cd":
         return ecs.filter(responsible_cd=user)
     if user.role == "des_team":
-        return ecs.filter(status=EC.Status.SENT_TO_DES)
+        return ecs.filter(status=EC.Status.CLOSED)
     return ecs
 
 
