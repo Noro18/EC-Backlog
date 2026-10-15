@@ -121,3 +121,32 @@ class ECTable(tables.Table):
         empty_text = "Nenhuma EC encontrada."
         per_page = 25
         order_by = ("-year", "-number_sequence")
+
+class ECDesTeamTable(tables.Table):
+    ec_code = tables.TemplateColumn(
+        verbose_name="EC",
+        orderable=False,
+        template_code="""<a href="{% url 'backlog:ec_detail' record.id %}" class="fw-semibold text-decoration-none">EC-{{ record.ec_code }}</a>""",
+    )
+    reference = tables.Column(
+        verbose_name="Referência",
+        attrs={"td": {"class": "text-nowrap text-body-secondary"}},
+    )
+    description = tables.Column(
+        verbose_name="Descrição",
+        attrs={"td": {"class": "text-body-secondary text-truncate", "style": "max-width: 28rem;"}},
+    )
+    requester = tables.Column(attrs={"td": {"class": "text-nowrap"}})
+    actions = tables.TemplateColumn(
+        verbose_name="Ações",
+        orderable=False,
+        template_code="""<a href="{% url 'backlog:ec_detail' record.id %}" class="btn btn-sm btn-outline-primary">Ver Detalhes</a>""",
+        attrs={"th": {"class": "text-end"}, "td": {"class": "text-end"}},
+    )
+
+    class Meta:
+        model = EC
+        template_name = "django_tables2/bootstrap5.html"
+        fields = ("ec_code", "reference", "description", "requester", "actions")
+        attrs = {"class": "table table-hover align-middle mb-0"}
+        empty_text = "Nenhum EC enviado para a DES no momento."

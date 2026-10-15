@@ -342,22 +342,11 @@ def cd_dashboard(user) -> dict:
 
 def des_team_dashboard(user) -> dict:
     """DES Team-centric dashboard stats and queues for ECs sent to DES."""
-    ec_qs = EC.objects.filter(status=EC.Status.SENT_TO_DES)
-
-    sent_ecs = []
-    for ec in ec_qs.prefetch_related("versions"):
-        latest = ec.versions.order_by("-id").first()
-        sent_ecs.append({
-            "id": ec.id,
-            "reference": ec.reference,
-            "version": latest.version_number if latest else "-",
-            "upload_at": latest.uploaded_at if latest else ec.created_at,
-            "description": ec.description,
-        })
+    ec_qs = EC.objects.filter(status=EC.Status.SENT_TO_DES).order_by("-year", "-number_sequence")
 
     return {
         "sent_total": ec_qs.count(),
-        "sent_ecs": sent_ecs,
+        "sent_ecs": ec_qs,
     }
 
 
