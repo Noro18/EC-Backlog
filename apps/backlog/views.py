@@ -26,7 +26,7 @@ from .selectors import (
     visible_ecs,
 )
 from .services import create_ec
-from .tables import EC_BADGE_CLASSES, RELEASE_BADGE_CLASSES, ECTable, ReleaseTable
+from .tables import EC_BADGE_CLASSES, RELEASE_BADGE_CLASSES, ECDesTeamTable, ECTable, ReleaseTable
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -42,7 +42,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         elif self.request.user.role == "cd":
             context["cd"] = cd_dashboard(self.request.user)
         elif self.request.user.role == "des_team":
-            context["des"] = des_team_dashboard(self.request.user)
+            des_data = des_team_dashboard(self.request.user)
+            context["des"] = des_data
+            context["des_table"] = ECDesTeamTable(des_data["sent_ecs"], request=self.request)
         return context
     
 

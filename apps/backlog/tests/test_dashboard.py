@@ -249,7 +249,7 @@ class TestDesTeamDashboard:
         data = des_team_dashboard(des_user)
 
         assert data["sent_total"] == 1
-        assert data["sent_ecs"][0]["reference"] == "DES2026001"
+        assert data["sent_ecs"][0].reference == "DES2026001"
 
     def test_page_renders_des_team_widgets(self, client):
         user = UserFactory(role=User.Role.DES_TEAM)

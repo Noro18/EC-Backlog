@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load render_table from django_tables2 %}
 
 {% block title %}Dashboard — Sistema de Gestão de Backlog EC{% endblock %}
 
@@ -221,49 +222,13 @@
                 </div>
             </div>
         </div>
-
-        {# --- DES Team EC Table --- #}
+        {# --- DES Team EC Table (django-tables2) --- #}
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">
                 Fila de Trabalho — Aguardando Ação da DES
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3">Referência</th>
-                            <th>Versão</th>
-                            <th>Data de Envio</th>
-                            <th>Descrição</th>
-                            <th class="text-end pe-3">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in des.sent_ecs %}
-                        <tr>
-                            <td class="ps-3 fw-semibold">
-                                <a href="{% url 'backlog:ec_detail' item.id %}" class="text-decoration-none">
-                                    {{ item.reference }}
-                                </a>
-                            </td>
-                            <td><span class="badge bg-secondary-subtle text-secondary">{{ item.version }}</span></td>
-                            <td><small class="text-muted">{{ item.uploaded_at|date:"d/m/Y H:i" }}</small></td>
-                            <td><span class="text-muted text-truncate d-inline-block" style="max-width: 280px;">{{ item.description|default:"-" }}</span></td>
-                            <td class="text-end pe-3">
-                                <a href="{% url 'backlog:ec_detail' item.id %}" class="btn btn-sm btn-outline-primary">
-                                    Ver Detalhes
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-muted text-center py-4">
-                                Nenhum EC enviado para a DES no momento.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-body p-0">
+                {% render_table des_table %}
             </div>
         </div>
     
