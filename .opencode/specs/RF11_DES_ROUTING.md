@@ -99,10 +99,11 @@ New `apps/backlog/tests/test_go_live.py`:
 3. Go-live is manual, later, on the closed Release — never automatic at routing.
 
 ## Verification
-- [ ] `uv run pytest -q` — full suite green
-- [ ] `uv run ruff check .` and `uv run python manage.py check` clean
-- [ ] `makemigrations --check --dry-run` → "No changes detected"
-- [ ] Manual: requester routes last EC → release closes → date form appears →
+- [x] `uv run pytest -q` — **200 passed, 0 failed**: full suite green (12 routing
+  + 7 go-live tests)
+- [x] `uv run ruff check .` and `uv run python manage.py check` clean
+- [x] `makemigrations --check --dry-run` → "No changes detected"
+- [x] Manual: requester routes last EC → release closes → date button appears →
   date saved; DES mailed at routing
 
 ## Status
