@@ -4,7 +4,7 @@
 
 A Django web system for Timor Telecom (TT) that tracks EC (configuration specification) approvals. It replaces an Excel spreadsheet. It will run on a local server and be reached by IP address over the LAN, in a real production environment.
 
-Workflow in one line: a Requester creates an EC, uploads the document, assigns a CD; the CD approves or rejects; approved ECs are routed to the DES team; rejected ECs are corrected and resubmitted as a new document version.
+Workflow in one line: a Requester creates an EC, uploads the document, assigns a CD; the CD approves or rejects; the requester routes approved ECs to the DES team (closing them — the Release closes with its last EC) and resubmits rejected ones as a new document version; the requester records the go-live date on the closed Release.
 
 ## 2. Stack and tooling
 
@@ -124,7 +124,7 @@ An arrow means "may import from". Each app may import only from apps to its righ
 - **Release ID format:** `TT_ON_AAAA-NNN` (for example `TT_ON_2026-001`). One Release has many ECs.
 - **Release capacity:** confirmed with the team — a Release is open while not all its ECs are closed, and it accepts at most **10 ECs**. When it reaches 10 it closes to new ECs, even if not all are approved or closed yet. If no Release is open, create a new one and assign the EC to it.
 - **Concurrency:** assigning an EC to a Release must not allow an 11th EC when two users submit at once. The capacity check runs inside `transaction.atomic()` and the rule is enforced by SQLite's exclusive write lock, **not** by `select_for_update()` — that call is a silent no-op on this engine (see section 2). Consequence: if the project ever moves to PostgreSQL, an 11th EC becomes possible and the guard must be reinstated, because nothing in the code will catch it. Test the capacity rule sequentially; do not claim a passing concurrent-write test as proof, since it passes for the wrong reason on SQLite.
-- **Statuses:** In Validation, Approved, Rejected, Sent to DES, Closed, Cancelled. Transitions are automatic, driven by `workflow`.
+- **Statuses:** In Validation, Approved, Rejected, Sent to DES, Closed, Cancelled. Transitions are automatic, driven by `workflow`: validation → Approved/Rejected; rejection → back to Validation on resubmit; routing an approved EC closes it; a Release closes automatically once all its ECs are closed.
 - **Rejection:** the CD must record a comment. The requester corrects and uploads a new document version. The EC ID stays the same and the version increments automatically (v1.0, v1.1, v2.0). All previous versions are kept.
 - **Notifications:** email the CD on assignment (RF08) and notify the requester of the decision (RF10). Sending must be reliable, with retry or an alert on failure (RNF03).
 - **Audit (RNF02):** every creation, assignment, approval, rejection and routing is recorded with user and date/time, immutably.

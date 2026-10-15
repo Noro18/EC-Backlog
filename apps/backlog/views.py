@@ -1,10 +1,13 @@
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, TemplateView
+from django.views.generic import CreateView, DetailView, TemplateView, View
 from django_tables2 import RequestConfig, SingleTableView
 
 from apps.accounts.models import User
@@ -152,5 +155,29 @@ class ReleaseDetailView(DetailView):
         context["status_badge_class"] = RELEASE_BADGE_CLASSES[release.status_label]
         RequestConfig(self.request).configure(context["ec_table"])
         return context
+
+
+class RecordGoLiveView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """RF04: record the go-live date on a closed Release. POST-only."""
+
+    def dispatch(self, request, *args, **kwargs):
+        self.release = get_object_or_404(Release, pk=self.kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def test_func(self):
+        return self.request.user.role == User.Role.REQUESTER and not self.release.is_open
+
+    def post(self, request, *args, **kwargs):
+        try:
+            go_live_date = date.fromisoformat(request.POST.get("go_live_date", "").strip())
+        except ValueError:
+            go_live_date = None
+        try:
+            record_go_live(self.release, request.user, go_live_date)
+        except (ValidationError, PermissionDenied) as error:
+            messages.error(request, getattr(error, "messages", str(error)))
+        else:
+            messages.success(request, f"Go-live de {self.release.release_code} registado.")
+        return redirect("backlog:release_detail", pk=self.release.pk)
 
 

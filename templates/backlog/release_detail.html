@@ -14,11 +14,42 @@
     </div>
     <div class="d-flex align-items-center gap-2">
         <span class="badge {{ status_badge_class }}">{{ release.status_label }}</span>
+        {% if not release.is_open and user.role == "requester" %}
+        <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#goLiveModal">
+            <i class="bi bi-calendar-check"></i> Go-Live
+        </button>
+        {% endif %}
         <a href="{% url 'backlog:release_list' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left"></i> Voltar
         </a>
     </div>
 </div>
+
+{% if not release.is_open and user.role == "requester" %}
+<div class="modal fade" id="goLiveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Go-Live da {{ release.release_code }}?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="No"></button>
+            </div>
+            <form method="post" action="{% url 'backlog:go_live' release.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Em que data esta Release entrou em produção?</p>
+                    <label class="form-label" for="goLiveDate">Data de go-live <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="goLiveDate" name="go_live_date" required
+                        {% if release.production_go_live_date %}value="{{ release.production_go_live_date|date:'Y-m-d' }}"{% endif %}>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                    <button type="submit" class="btn btn-primary">Yes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="row g-3">
     <div class="col-lg-7">

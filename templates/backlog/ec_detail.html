@@ -23,12 +23,40 @@
             <i class="bi bi-arrow-repeat"></i> Resubmit
         </a>
         {% endif %}
+        {% if ec.status == "approved" and user.pk == ec.requester_id %}
+        <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#sendToDesModal">
+            <i class="bi bi-send"></i> Send to DES
+        </button>
+        {% endif %}
         <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary btn-sm"
             onclick="if (history.length > 1) { history.back(); return false; }">
                 <i class="bi bi-arrow-left"></i> Voltar
         </a>
     </div>
 </div>
+
+{% if ec.status == "approved" and user.pk == ec.requester_id %}
+<div class="modal fade" id="sendToDesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Send to DES?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="No"></button>
+            </div>
+            <form method="post" action="{% url 'workflow:route_to_des' ec.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Enviar EC-{{ ec.ec_code }} ({{ ec.reference }}) ao DES para implementação?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                    <button type="submit" class="btn btn-primary">Yes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="row g-3">
 

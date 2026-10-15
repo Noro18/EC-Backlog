@@ -134,7 +134,7 @@ The table below consolidates the functional requirements identified from the pro
 | RF08 | Automatic email notification | When the specification is assigned, the system must automatically send an email notification to the designated CD, informing them that validation is needed. |
 | RF09 | Recording of the approval or rejection decision | The system must allow the CD to approve or reject the specification directly in the system. In case of rejection, the CD must record a comment with the reason, which is returned to the requester/team (see RF10); the specification can then be corrected and resubmitted by the same requester. |
 | RF10 | Return of the decision to the team | After the CD's decision (approval or rejection), the system must automatically notify the originating requester/team of the validation result, including the comment in case of rejection. |
-| RF11 | Routing to the DES team | Once approved, the team must be able to route the specification, through the same system, to the DES team, preserving the history and traceability of the process. |
+| RF11 | Routing to the DES team | Once approved, the requester must be able to route the specification, through the same system, to the DES team, preserving the history and traceability of the process. Routing automatically closes the EC. When all ECs in a Release are closed, the Release closes automatically. The CD's role ends at approval/rejection (RF09). |
 | RF12 | Consultation and search (backlog) | The system must provide a backlog view, with search and filtering by EC ID, Release, Status, date, and requester, replacing the current Excel spreadsheet and consolidating the history of all years. |
 
 > **Note:** In the original document, RF10 is numbered "RF010"; it is treated here as RF10 for consistency.
@@ -153,10 +153,10 @@ The proposed flow for the new system is as follows:
 6. The system notifies the CD by email (RF08).
 7. The CD reviews the document and records the decision — approval or rejection — in the system (RF09).
 8. The system automatically notifies the requester/team of the decision (RF10).
-9. If approved, the team routes the specification to the DES team through the system (RF11).
+9. If approved, the requester routes the specification to the DES team through the system, which automatically closes the EC. When all ECs in a Release are closed, the Release closes automatically (RF11).
 10. If rejected, the CD records a comment with the reason for rejection, and the specification is returned to the requester/team (RF09, RF10).
 11. The requester corrects the specification and uploads a new version of the document to the system. The system automatically increments the version and preserves the history of previous versions (RF05). The flow returns to step 5 for reassignment to a CD.
-12. After implementation in Production, the Production Go-Live Date is recorded manually in the system (RF04).
+12. After all ECs are closed and the Release closes, the requester records the Production Go-Live Date on the closed Release in the system (RF04).
 13. The EC status is updated in the backlog (RF11).
 
 ---
