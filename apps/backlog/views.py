@@ -29,7 +29,14 @@ from .selectors import (
     visible_ecs,
 )
 from .services import create_ec
-from .tables import EC_BADGE_CLASSES, RELEASE_BADGE_CLASSES, ECDesTeamTable, ECTable, ReleaseTable
+from .tables import (
+    EC_BADGE_CLASSES,
+    RELEASE_BADGE_CLASSES,
+    ECDesTeamTable,
+    ECRequesterTable,
+    ECTable,
+    ReleaseTable,
+)
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -41,7 +48,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Only the requester pays for this extra query; the other roles never
         # read `req`, so we skip it entirely rather than render an empty dict.
         if self.request.user.role == "requester":
-            context["req"] = requester_dashboard(self.request.user) #requester_dashboard ne mai husi file selector.py
+            req_data = requester_dashboard(self.request.user)
+            context["req"] = req_data
+            context["req_table"] = ECRequesterTable(req_data["my_ecs"], request=self.request)
         elif self.request.user.role == "cd":
             context["cd"] = cd_dashboard(self.request.user)
         elif self.request.user.role == "des_team":

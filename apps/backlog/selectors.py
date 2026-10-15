@@ -342,7 +342,7 @@ def cd_dashboard(user) -> dict:
 
 def des_team_dashboard(user) -> dict:
     """DES Team-centric dashboard stats and queues for ECs sent to DES."""
-    ec_qs = EC.objects.filter(status=EC.Status.SENT_TO_DES).order_by("-year", "-number_sequence")
+    ec_qs = EC.objects.filter(status=EC.Status.CLOSED).order_by("-year", "-number_sequence")
 
     return {
         "sent_total": ec_qs.count(),
