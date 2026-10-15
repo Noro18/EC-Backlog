@@ -1,10 +1,11 @@
 import pytest
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.backlog.models import EC, Release
-from apps.backlog.services import create_ec, next_ec_number
+from apps.backlog.services import create_ec, create_release, next_ec_number
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -117,3 +118,49 @@ class TestCreateEcCapacity:
                 release=release,
                 responsible_cd=cd,
             )
+
+
+class TestCreateRelease:
+    """RELEASE_CREATE_ON_DEMAND.md (RF02): minting the next Release on demand."""
+
+    def test_empty_year_starts_at_001(self):
+        release = create_release()
+        year = timezone.localdate().year
+        assert release.release_code == f"TT_ON_{year}-001"
+        assert (release.year, release.number_sequence) == (year, 1)
+        assert release.capacity == 10
+        assert release.is_open is True
+
+    def test_continues_sequence_of_current_year(self):
+        year = timezone.localdate().year
+        ReleaseFactory(year=year, number_sequence=3)
+
+        release = create_release()
+
+        assert release.release_code == f"TT_ON_{year}-004"
+
+    def test_ignores_other_years(self):
+        year = timezone.localdate().year
+        ReleaseFactory(year=year - 1, number_sequence=99)
+
+        release = create_release()
+
+        assert release.release_code == f"TT_ON_{year}-001"
+
+    def test_retries_on_race(self, monkeypatch):
+        real_create = Release.objects.create
+        calls = {"n": 0}
+
+        def flaky(**kwargs):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise IntegrityError("simulated concurrent mint")
+            return real_create(**kwargs)
+
+        monkeypatch.setattr(Release.objects, "create", flaky)
+
+        release = create_release()
+
+        assert calls["n"] == 2
+        assert Release.objects.count() == 1
+        assert release.number_sequence == 1
