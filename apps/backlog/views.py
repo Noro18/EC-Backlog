@@ -19,6 +19,7 @@ from .selectors import (
     build_ec_timeline,
     cd_dashboard,
     dashboard_stats,
+    des_team_dashboard,
     release_with_ec_count,
     requester_dashboard,
     search_ecs,
@@ -40,6 +41,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context["req"] = requester_dashboard(self.request.user) #requester_dashboard ne mai husi file selector.py
         elif self.request.user.role == "cd":
             context["cd"] = cd_dashboard(self.request.user)
+        elif self.request.user.role == "des_team":
+            context["des"] = des_team_dashboard(self.request.user)
         return context
     
 
