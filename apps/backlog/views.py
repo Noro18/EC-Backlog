@@ -22,13 +22,14 @@ from .selectors import (
     build_ec_timeline,
     cd_dashboard,
     dashboard_stats,
+    des_team_dashboard,
     release_with_ec_count,
     requester_dashboard,
     search_ecs,
     visible_ecs,
 )
-from .services import create_ec, record_go_live
-from .tables import EC_BADGE_CLASSES, RELEASE_BADGE_CLASSES, ECTable, ReleaseTable
+from .services import create_ec
+from .tables import EC_BADGE_CLASSES, RELEASE_BADGE_CLASSES, ECDesTeamTable, ECTable, ReleaseTable
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -43,6 +44,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context["req"] = requester_dashboard(self.request.user) #requester_dashboard ne mai husi file selector.py
         elif self.request.user.role == "cd":
             context["cd"] = cd_dashboard(self.request.user)
+        elif self.request.user.role == "des_team":
+            des_data = des_team_dashboard(self.request.user)
+            context["des"] = des_data
+            context["des_table"] = ECDesTeamTable(des_data["sent_ecs"], request=self.request)
         return context
     
 
@@ -80,11 +85,14 @@ class NewECView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         failed_on = "release"
         try:
             with transaction.atomic():
+                release = form.cleaned_data["release"]
+                if form.wants_new_release:
+                    release = create_release()  # RF02 on-demand; rolls back with the EC
                 ec = create_ec(
                     requester=self.request.user,
                     reference=form.cleaned_data["reference"],
                     description=form.cleaned_data["description"],
-                    release=form.cleaned_data["release"],
+                    release=release,
                     responsible_cd=form.cleaned_data["responsible_cd"],
                 )
                 if file := self.request.FILES.get("document"):
