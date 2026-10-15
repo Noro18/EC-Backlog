@@ -6,7 +6,11 @@ from apps.backlog.models import EC
 from apps.documents.models import DocumentVersion  # workflow → documents: downward, allowed
 from apps.documents.services import create_next_version
 from apps.workflow.models import Review
-from apps.workflow.notifications import queue_cd_assigned, queue_decision_made
+from apps.workflow.notifications import (
+    queue_cd_assigned,
+    queue_decision_made,
+    queue_des_routed,
+)
 from apps.workflow.selectors import latest_version
 
 
@@ -87,3 +91,25 @@ def resubmit_ec(ec, user, file, change_reason="", major=False, responsible_cd=No
         ec.save(update_fields=["responsible_cd", "status"])
         queue_cd_assigned(ec)
     return version
+
+
+def route_to_des(ec: EC, user) -> EC:
+    """RF11: the requester sends an approved EC to DES. Routing closes the EC;
+    the Release closes with its last EC. The CD's role ends at approval."""
+    if ec.status != EC.Status.APPROVED:
+        raise ValidationError("Only an approved EC can be sent to DES.")
+    if user.pk != ec.requester_id:
+        raise PermissionDenied("Only the requester can send this EC to DES.")
+    with transaction.atomic():
+        ec.status = EC.Status.CLOSED
+        ec.save(update_fields=["status"])
+        release = ec.release
+        if release is not None:
+            still_open = release.ecs.exclude(
+                status__in=[EC.Status.CLOSED, EC.Status.CANCELLED]
+            ).exists()
+            if not still_open:
+                release.is_open = False
+                release.save(update_fields=["is_open"])
+        queue_des_routed(ec)
+    return ec
