@@ -69,7 +69,9 @@
                         <p class="text-muted mb-1">A versão atual aparece em destaque.</p>
                     </div>
                     <div class="card-body p-0">
-                        {% render_table req_table %}
+                        <div class="card-body p-0">
+                            {% render_table req_table %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -121,37 +123,8 @@
             <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6 text-warning">
                 ECs que precisam da sua revisão
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Referência</th>
-                            <th>Versão</th>
-                            <th>Enviado em</th>
-                            <th class="text-end">Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in cd.pending_review %}
-                        <tr>
-                            <td class="fw-semibold">{{ item.reference }}</td>
-                            <td>{{ item.version }}</td>
-                            <td>{{ item.uploaded_at|date:"d/m/Y H:i" }}</td>
-                            <td class="text-end">
-                                <a href="{% url 'backlog:ec_detail' item.id %}" class="btn btn-sm btn-outline-warning">
-                                    Revisar
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-muted text-center py-3">
-                                Nenhum EC pendente de revisão.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-body p-0">
+                {% render_table cd_table %}
             </div>
         </div>
 
@@ -182,8 +155,6 @@
         </div>
     
     
-
-        
     
     {% elif user.role == 'administrator' %}
     <div class="card mb-4" style="border: 2px dashed #adb5bd;">

@@ -28,10 +28,11 @@ from .selectors import (
     search_ecs,
     visible_ecs,
 )
-from .services import create_ec
+from .services import create_ec, create_release, record_go_live
 from .tables import (
     EC_BADGE_CLASSES,
     RELEASE_BADGE_CLASSES,
+    CDPendingReviewTable,
     ECDesTeamTable,
     ECRequesterTable,
     ECTable,
@@ -52,7 +53,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             context["req"] = req_data
             context["req_table"] = ECRequesterTable(req_data["my_ecs"], request=self.request)
         elif self.request.user.role == "cd":
-            context["cd"] = cd_dashboard(self.request.user)
+            cd_data = cd_dashboard(self.request.user)
+            context["cd"] = cd_data
+            context["cd_table"] = CDPendingReviewTable(cd_data["pending_review"], request=self.request)
         elif self.request.user.role == "des_team":
             des_data = des_team_dashboard(self.request.user)
             context["des"] = des_data
