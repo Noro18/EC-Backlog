@@ -80,3 +80,26 @@ class TestRecordGoLiveView:
         assert client.get(_go_live_url(release)).status_code == 405
         release.refresh_from_db()
         assert release.production_go_live_date is None
+
+
+class TestGoLiveButtonVisibility:
+    """Issue #65: the modal button is only for the not-yet-recorded state."""
+
+    def _detail_page_for(self, client, release):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        client.force_login(requester)
+        return client.get(reverse("backlog:release_detail", args=[release.pk])).content.decode()
+
+    def test_button_hidden_once_date_is_set(self, client):
+        release = ReleaseFactory(is_open=False, production_go_live_date=GO_LIVE)
+
+        html = self._detail_page_for(client, release)
+
+        assert 'data-bs-target="#goLiveModal"' not in html
+
+    def test_button_present_until_date_is_set(self, client):
+        release = _closed_release()
+
+        html = self._detail_page_for(client, release)
+
+        assert 'data-bs-target="#goLiveModal"' in html
