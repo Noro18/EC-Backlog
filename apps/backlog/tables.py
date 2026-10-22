@@ -245,3 +245,27 @@ class CDPendingReviewTable(tables.Table):
         fields = ("ec_code", "versions", "uploaded_at", "actions") 
         attrs = {"class": "table table-hover align-middle mb-0"}
         empty_text = "Nenhum EC pendente de revisão."
+
+
+class ActivityTable(tables.Table):
+    """`Atividade recente` rows on the admin dashboard.
+
+    Records are the `{time, description}` dicts built by `admin_dashboard`,
+    not `LogEntry` rows, so both columns are plain and not orderable.
+    """
+
+    time = tables.Column(
+        verbose_name="Hora",
+        orderable=False,
+        attrs={"td": {"class": "text-muted small text-nowrap", "style": "width: 5.5rem;"}},
+    )
+    description = tables.Column(
+        verbose_name="Atividade",
+        orderable=False,
+        attrs={"td": {"class": "small"}},
+    )
+
+    class Meta:
+        template_name = "django_tables2/bootstrap5.html"
+        attrs = {"class": "table table-hover align-middle mb-0"}
+        empty_text = "Sem atividade registada."

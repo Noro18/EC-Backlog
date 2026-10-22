@@ -6,12 +6,20 @@ Same module-level `pytestmark` and `class Test...:` grouping as `test_views.py`.
 from datetime import date
 
 import pytest
+from auditlog.context import set_actor
+from auditlog.models import LogEntry
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from apps.backlog.models import EC
-from apps.backlog.selectors import dashboard_stats, des_team_dashboard, requester_dashboard
+from apps.backlog.selectors import (
+    admin_dashboard,
+    dashboard_stats,
+    des_team_dashboard,
+    requester_dashboard,
+)
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
+from apps.documents.models import DocumentVersion
 
 pytestmark = pytest.mark.django_db
 
@@ -38,21 +46,8 @@ class TestDashboardAccess:
 
 
 class TestRolePlaceholders:
-    # Requester, CD, and DES Team rows are absent: their widgets are implemented,
-    # so they show real content instead of a placeholder.
-    @pytest.mark.parametrize(
-        "role,expected",
-        [
-            (User.Role.ADMINISTRATOR, "Widgets específicos do Administrador"),
-        ],
-    )
-    def test_the_dashboard_shows_the_placeholder_of_the_signed_in_role(
-        self, client, role, expected
-    ):
-        login_as(client, role)
-        html = client.get(reverse("backlog:dashboard")).content.decode()
-
-        assert expected in html
+    # Requester, CD, DES Team and Administrator rows are absent: their widgets
+    # are implemented, so they show real content instead of a placeholder.
 
     def test_an_unknown_role_gets_no_placeholder(self, client):
         user = login_as(client, User.Role.REQUESTER)
@@ -68,6 +63,134 @@ class TestRolePlaceholders:
 
         assert response.status_code == 302
         assert response.url == "/?next=/backlog/dashboard/"
+
+
+class TestAdminDashboard:
+    def test_admin_sees_header_kpis_users_and_activity(self, client):
+        admin = UserFactory(role=User.Role.ADMINISTRATOR, name="Ana Admin")
+        UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(status=EC.Status.IN_VALIDATION, requester=admin)
+        ReleaseFactory(is_open=True)
+        client.force_login(admin)
+
+        response = client.get(reverse("backlog:dashboard"))
+        html = response.content.decode()
+
+        assert response.status_code == 200
+        assert "admin" in response.context
+        assert "log_table" in response.context
+        assert "Painel do Administrador" in html
+        assert "Ana Admin" in html
+        assert "Utilizadores" in html
+        assert "em curso" in html
+        assert "aguardam revisão" in html
+        assert "no registo de auditoria" in html
+        assert "Atividade recente" in html
+        assert "Ver todos os logs" in html
+        assert "Pesquisar nome..." not in html
+        # The feed is rendered by django-tables2 (`ActivityTable`), not a <ul>.
+        assert "Hora" in html
+        assert f"criou o EC {ec}" in html
+
+    def test_non_admin_does_not_see_the_admin_panel(self, client):
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+
+        html = client.get(reverse("backlog:dashboard")).content.decode()
+
+        assert "Painel do Administrador" not in html
+        assert "Atividade recente" not in html
+
+    def test_the_user_list_stays_out_of_the_dashboard(self, client):
+        # The list itself lives on `Gestão de Utilizadores` (accounts:user_list);
+        # the dashboard only shows the KPI card and the activity chart.
+        UserFactory(role=User.Role.REQUESTER, username="maria.costax")
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR, username="boss.admin"))
+
+        html = client.get(reverse("backlog:dashboard")).content.decode()
+
+        assert "maria.costax@example.com" not in html
+        assert "/admin/accounts/user/" not in html
+
+    def test_counts_match_the_database(self):
+        admin = UserFactory(role=User.Role.ADMINISTRATOR)
+        UserFactory(role=User.Role.CD)
+        UserFactory(role=User.Role.DES_TEAM, is_active=False)
+        open_release = ReleaseFactory(is_open=True)
+        ReleaseFactory(is_open=False)
+        # Both ECs share the open release so they do not create extra releases.
+        ECFactory(status=EC.Status.IN_VALIDATION, requester=admin, release=open_release)
+        ECFactory(status=EC.Status.CLOSED, requester=admin, release=open_release)
+
+        data = admin_dashboard(admin)
+
+        assert data["users_total"] == 3
+        assert data["users_active"] == 2
+        assert data["releases_total"] == 2
+        assert data["releases_open"] == 1
+        assert data["ec_total"] == 2
+        assert data["ec_pending_review"] == 1
+
+    def test_recent_logs_come_from_auditlog(self):
+        admin = UserFactory(role=User.Role.ADMINISTRATOR)
+        ec = ECFactory(requester=admin)  # save() writes a LogEntry row
+
+        data = admin_dashboard(admin)
+
+        assert data["actions_today"] >= 1
+        assert data["recent_logs"]
+        entry = data["recent_logs"][0]
+        assert f"criou o EC {ec}" in entry["description"]
+        assert len(entry["time"]) == 5  # "HH:MM"
+
+    def test_an_upload_reads_as_one_portuguese_sentence(self):
+        admin = UserFactory(role=User.Role.ADMINISTRATOR, name="Maria da Costa")
+        ec = ECFactory(requester=admin)
+        # The actor comes from the request (auditlog middleware); `set_actor`
+        # is how auditlog exposes that outside of a real request.
+        with set_actor(admin):
+            DocumentVersion.objects.create(
+                ec=ec, version_number="v1.0", uploaded_by=admin
+            )
+
+        data = admin_dashboard(admin)
+
+        assert any(
+            "Maria da Costa" in log["description"]
+            and "enviou a v1.0" in log["description"]
+            and ec.ec_code in log["description"]
+            for log in data["recent_logs"]
+        )
+
+    def test_the_feed_is_limited_to_the_five_latest_entries(self):
+        admin = UserFactory(role=User.Role.ADMINISTRATOR)
+        for _ in range(7):
+            ECFactory(requester=admin)
+
+        data = admin_dashboard(admin)
+
+        assert len(data["recent_logs"]) == 5
+
+    def test_empty_feed_shows_the_portuguese_placeholder(self, client):
+        # ADMIN_DASHBOARD.md edge case 1: a fresh install has nothing to show
+        # and must not render a blank card.
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+        LogEntry.objects.all().delete()
+
+        html = client.get(reverse("backlog:dashboard")).content.decode()
+
+        assert "Sem atividade registada." in html
+
+    def test_log_without_an_actor_reads_as_sistema(self):
+        # ADMIN_DASHBOARD.md edge case 2: rows written outside a request carry
+        # `actor=None`, which must read as a name, never as "None".
+        admin = UserFactory(role=User.Role.ADMINISTRATOR)
+        ECFactory(requester=admin)
+
+        descriptions = [log["description"] for log in admin_dashboard(admin)["recent_logs"]]
+
+        assert descriptions
+        assert any(text.startswith("Sistema") for text in descriptions)
+        assert all("None" not in text for text in descriptions)
 
 
 class TestDashboardStats:

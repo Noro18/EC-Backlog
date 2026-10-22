@@ -1,7 +1,12 @@
+import re
+
+from auditlog.models import LogEntry
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count, F, Q
 from django.db.models.functions import TruncMonth
+from django.utils import timezone
 
+from apps.accounts.models import User
 from apps.backlog.models import EC, Release
 
 
@@ -347,6 +352,111 @@ def des_team_dashboard(user) -> dict:
     return {
         "sent_total": ec_qs.count(),
         "sent_ecs": ec_qs,
+    }
+
+
+# --- Administrator dashboard: auditlog activity feed (PT labels) --------------
+# The UI language is Portuguese, so an audit row is translated into one
+# readable sentence such as "João Soares aprovou o EC 2026-012".
+EC_STATUS_PT = {
+    "in_validation": "Em validação",
+    "approved": "Aprovada",
+    "rejected": "Rejeitada",
+    "sent_to_des": "Enviada para DES",
+    "closed": "Fechada",
+    "cancelled": "Cancelada",
+}
+
+_LOG_NOUN_PT = {
+    "user": "o utilizador",
+    "ec": "o EC",
+    "release": "a Release",
+}
+
+_LOG_VERBS = {
+    LogEntry.Action.CREATE: "criou",
+    LogEntry.Action.UPDATE: "alterou",
+    LogEntry.Action.DELETE: "removeu",
+}
+
+# `DocumentVersion.__str__` is "2026-012 - v1.0" and `Review.__str__` embeds it,
+# so the EC code can be pulled back out of `object_repr`.
+_EC_CODE_RE = re.compile(r"\d{4}-\d{3}")
+_EC_VERSION_RE = re.compile(r"v\d+\.\d+")
+
+
+def _changed(changes: dict, field: str):
+    """Return `(old, new)` for `field`, or `(None, None)` if auditlog has none."""
+    value = changes.get(field)
+    if isinstance(value, (list, tuple)) and len(value) == 2:
+        return value[0], value[1]
+    return None, None
+
+
+def _log_activity(entry: LogEntry) -> dict:
+    """Turn one `LogEntry` row into `{time, description}` for the feed."""
+    actor = entry.actor
+    actor_name = (actor.full_name or actor.username) if actor else "Sistema"
+    model = entry.content_type.model if entry.content_type else ""
+    changes = entry.changes if isinstance(entry.changes, dict) else {}
+    code = _EC_CODE_RE.search(entry.object_repr)
+    target = f"EC {code.group()}" if code else entry.object_repr
+
+    if model == "documentversion" and entry.action == LogEntry.Action.CREATE:
+        # "Maria da Costa enviou a v1.0 do EC 2026-012"
+        version = _EC_VERSION_RE.search(entry.object_repr)
+        suffix = f" a {version.group()}" if version else ""
+        description = f"{actor_name} enviou{suffix} do {target}"
+    elif model == "review":
+        _old, decision = _changed(changes, "decision")
+        _old_comment, comment = _changed(changes, "comment")
+        if decision == "approved":
+            description = f"{actor_name} aprovou o {target}"
+        elif decision == "rejected":
+            suffix = " com comentário" if comment else ""
+            description = f"{actor_name} rejeitou o {target}{suffix}"
+        else:
+            description = f"{actor_name} avaliou o {target}"
+    else:
+        verb = _LOG_VERBS.get(entry.action, "atualizou")
+        noun = _LOG_NOUN_PT.get(model)
+        description = (
+            f"{actor_name} {verb} {noun} {entry.object_repr}".strip()
+            if noun
+            else f"{actor_name} {verb} {entry.object_repr}"
+        )
+        _old, new_status = _changed(changes, "status")
+        if model == "ec" and new_status:
+            description += f" → {EC_STATUS_PT.get(new_status, new_status)}"
+
+    return {
+        "time": timezone.localtime(entry.timestamp).strftime("%H:%M"),
+        "description": description,
+    }
+
+
+def admin_dashboard(user) -> dict:
+    """Administrator dashboard: global counts + the recent activity feed.
+
+    Every query for `Painel do Administrador` lives here so the view stays thin.
+    """
+    today = timezone.localdate()
+    ec_qs = EC.objects.all()
+    log_qs = LogEntry.objects.select_related("actor", "content_type")
+
+    return {
+        # KPI cards
+        "users_total": User.objects.count(),
+        "users_active": User.objects.filter(is_active=True).count(),
+        "releases_total": Release.objects.count(),
+        "releases_open": Release.objects.filter(is_open=True).count(),
+        "ec_total": ec_qs.count(),
+        "ec_pending_review": ec_qs.filter(status=EC.Status.IN_VALIDATION).count(),
+        "actions_today": log_qs.filter(timestamp__date=today).count(),
+        # "Atividade recente" panel
+        "recent_logs": [
+            _log_activity(entry) for entry in log_qs.order_by("-timestamp")[:5]
+        ],
     }
 
 

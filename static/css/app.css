@@ -515,6 +515,26 @@ body.app-shell {
 }
 
 /* ==========================================================================
+   Admin dashboard — KPI icon boxes (rounded tinted square on the left)
+   ========================================================================== */
+.kpi-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.65rem;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+/* Bootstrap has no violet utility, so the "Ações hoje" icon gets its own tint. */
+.kpi-violet {
+    background-color: rgba(139, 92, 246, 0.16);
+    color: #8b5cf6;
+}
+
+/* ==========================================================================
    Accent buttons — Bootstrap hardcodes #0d6efd in .btn-primary, so the
    palette blue has to be restated here for both themes.
    ========================================================================== */
