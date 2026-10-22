@@ -90,3 +90,12 @@ class TestUserList:
 
         assert f'/admin/accounts/user/{target.pk}/change/' in html
         assert "Editar" in html
+
+    def test_non_administrator_gets_403(self, client):
+        # ACCOUNTS_USER_LIST.md: permission is enforced in the view, and the
+        # gap carried since scope A is now closed — the page gained actions.
+        client.force_login(UserFactory(role="requester"))
+
+        response = client.get(reverse("accounts:user_list"))
+
+        assert response.status_code == 403
