@@ -7,6 +7,7 @@ from datetime import date
 
 import pytest
 from auditlog.context import set_actor
+from auditlog.models import LogEntry
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
@@ -168,6 +169,28 @@ class TestAdminDashboard:
         data = admin_dashboard(admin)
 
         assert len(data["recent_logs"]) == 5
+
+    def test_empty_feed_shows_the_portuguese_placeholder(self, client):
+        # ADMIN_DASHBOARD.md edge case 1: a fresh install has nothing to show
+        # and must not render a blank card.
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+        LogEntry.objects.all().delete()
+
+        html = client.get(reverse("backlog:dashboard")).content.decode()
+
+        assert "Sem atividade registada." in html
+
+    def test_log_without_an_actor_reads_as_sistema(self):
+        # ADMIN_DASHBOARD.md edge case 2: rows written outside a request carry
+        # `actor=None`, which must read as a name, never as "None".
+        admin = UserFactory(role=User.Role.ADMINISTRATOR)
+        ECFactory(requester=admin)
+
+        descriptions = [log["description"] for log in admin_dashboard(admin)["recent_logs"]]
+
+        assert descriptions
+        assert any(text.startswith("Sistema") for text in descriptions)
+        assert all("None" not in text for text in descriptions)
 
 
 class TestDashboardStats:
