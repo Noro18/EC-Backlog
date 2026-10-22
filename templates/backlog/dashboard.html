@@ -7,8 +7,10 @@
 {% block content %}
 
 <div class="dash-widgets">
+    {% if user.role != 'administrator' %}
     <h3 class="mb-1">Dashboard</h3>
     <p class="text-muted mb-4">Visão geral e acompanhamento.</p>
+    {% endif %}
 
     {% if user.role == 'requester' %}
 
@@ -157,12 +159,78 @@
     
     
     {% elif user.role == 'administrator' %}
-    <div class="card mb-4" style="border: 2px dashed #adb5bd;">
-        <div class="card-body text-center text-muted py-5">
-            <i class="bi bi-tools fs-1 d-block mb-2"></i>
-            <div class="fw-semibold">Widgets específicos do Administrador — em construção</div>
+
+        <h3 class="mb-1">Painel do Administrador</h3>
+        <p class="text-muted mb-4">
+            Sessão iniciada como <span class="fw-semibold">{{ user.full_name|default:user.username }}</span>
+        </p>
+
+        {# --- KPI cards --- #}
+        <div class="row g-3 mb-4">
+            <div class="col-md-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-person"></i></span>
+                        <div>
+                            <div class="fs-2 fw-bold lh-1">{{ admin.users_total }}</div>
+                            <div class="text-body-secondary small">Utilizadores</div>
+                            <div class="text-muted small">{{ admin.users_active }} ativos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="kpi-icon bg-success-subtle text-success"><i class="bi bi-tag"></i></span>
+                        <div>
+                            <div class="fs-2 fw-bold lh-1">{{ admin.releases_total }}</div>
+                            <div class="text-body-secondary small">Releases</div>
+                            <div class="text-muted small">{{ admin.releases_open }} em curso</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-file-earmark-text"></i></span>
+                        <div>
+                            <div class="fs-2 fw-bold lh-1">{{ admin.ec_total }}</div>
+                            <div class="text-body-secondary small">Total de EC</div>
+                            <div class="text-muted small">{{ admin.ec_pending_review }} aguardam revisão</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <span class="kpi-icon kpi-violet"><i class="bi bi-activity"></i></span>
+                        <div>
+                            <div class="fs-2 fw-bold lh-1">{{ admin.actions_today }}</div>
+                            <div class="text-body-secondary small">Ações hoje</div>
+                            <div class="text-muted small">no registo de auditoria</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+
+        {# --- Recent activity (the user list lives in "Gestão de Utilizadores") --- #}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-body border-0 pt-3 pb-0 fw-semibold fs-6">
+                Atividade recente
+            </div>
+            <div class="card-body">
+                {% render_table log_table %}
+                <a class="d-inline-block mt-3 small fw-semibold text-decoration-none"
+                   href="{% url 'admin:auditlog_logentry_changelist' %}">
+                    Ver todos os logs <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
     {% endif %}
 </div>
     {% endblock %}
@@ -307,5 +375,8 @@
         }
         });
     });
+
+    // ---------- Administrator: auditlog activity is a plain text list ----------
+    // (no chart here on purpose — the feed renders server-side from auditlog).
     </script>
 {% endblock %}

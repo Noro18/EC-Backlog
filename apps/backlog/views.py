@@ -19,6 +19,7 @@ from apps.workflow.notifications import (
 from .forms import ECCreateForm
 from .models import EC, Release
 from .selectors import (
+    admin_dashboard,
     build_ec_timeline,
     cd_dashboard,
     dashboard_stats,
@@ -32,6 +33,7 @@ from .services import create_ec, create_release, record_go_live
 from .tables import (
     EC_BADGE_CLASSES,
     RELEASE_BADGE_CLASSES,
+    ActivityTable,
     CDPendingReviewTable,
     ECDesTeamTable,
     ECRequesterTable,
@@ -60,6 +62,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             des_data = des_team_dashboard(self.request.user)
             context["des"] = des_data
             context["des_table"] = ECDesTeamTable(des_data["sent_ecs"], request=self.request)
+        elif self.request.user.role == "administrator":
+            # Admin-only: the metrics are never built for other roles, so no
+            # admin data leaks outside the admin panel. The user list itself
+            # lives on the `Gestão de Utilizadores` page (accounts:user_list).
+            context["admin"] = admin_dashboard(self.request.user)
+            context["log_table"] = ActivityTable(
+                context["admin"]["recent_logs"], request=self.request
+            )
         return context
     
 
