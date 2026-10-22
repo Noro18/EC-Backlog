@@ -71,3 +71,31 @@ class TestUserList:
         assert second.context["table"].page.number == 2
         assert "pag00" in first.content.decode()
         assert "pag00" not in second.content.decode()
+
+    def test_search_filters_the_table(self, client):
+        client.force_login(UserFactory(role="administrator"))
+        UserFactory(username="maria.costax")
+        UserFactory(username="joao.soares")
+
+        html = client.get(reverse("accounts:user_list"), {"q": "maria.costax"}).content.decode()
+
+        assert "maria.costax@example.com" in html
+        assert "joao.soares@example.com" not in html
+
+    def test_edit_column_links_to_the_admin_change_form(self, client):
+        client.force_login(UserFactory(role="administrator"))
+        target = UserFactory(username="para.editar")
+
+        html = client.get(reverse("accounts:user_list")).content.decode()
+
+        assert f'/admin/accounts/user/{target.pk}/change/' in html
+        assert "Editar" in html
+
+    def test_non_administrator_gets_403(self, client):
+        # ACCOUNTS_USER_LIST.md: permission is enforced in the view, and the
+        # gap carried since scope A is now closed — the page gained actions.
+        client.force_login(UserFactory(role="requester"))
+
+        response = client.get(reverse("accounts:user_list"))
+
+        assert response.status_code == 403

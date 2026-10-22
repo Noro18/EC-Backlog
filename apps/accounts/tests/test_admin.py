@@ -1,4 +1,5 @@
 import pytest
+from auditlog.models import LogEntry
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import identify_hasher
 
@@ -36,3 +37,19 @@ class TestAdminUserCreate:
         identify_hasher(user.password)  # raises ValueError if the value is plaintext
         assert user.password != "SenhaForte123!"
         assert authenticate(username="barucoba", password="SenhaForte123!") == user
+
+
+class TestAdminUserAudit:
+    def test_user_changes_reach_the_audit_log(self, admin_client, admin_user):
+        # RNF02 / ADMIN_DASHBOARD.md: `auditlog.register(User)` lives in
+        # apps/accounts/admin.py, so a change made here must feed the dashboard.
+        admin_client.post(ADD_URL, PAYLOAD)
+
+        user = User.objects.get(username="barucoba")
+        entry = LogEntry.objects.get(
+            content_type__model="user", object_pk=str(user.pk)
+        )
+
+        assert entry.action == LogEntry.Action.CREATE
+        assert entry.actor == admin_user  # who
+        assert entry.timestamp is not None  # and when

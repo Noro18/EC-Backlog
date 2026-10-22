@@ -1,4 +1,5 @@
 import django_tables2 as tables
+from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import User
@@ -17,6 +18,7 @@ class UserTable(tables.Table):
     role = tables.Column(verbose_name="Role", empty_values=())
     is_active = tables.Column(verbose_name="Estado", empty_values=())
     last_login = tables.Column(verbose_name="Última atividade")
+    edit = tables.Column(verbose_name="", empty_values=(), orderable=False)
 
     def render_name(self, record):
         return record.full_name or record.username
@@ -37,14 +39,18 @@ class UserTable(tables.Table):
             return format_html('<span class="{}">—</span>', "text-bg-tertiary")
         return record.last_login.strftime("%d/%m/%Y %H:%M")
 
+    def render_edit(self, record):
+        # "Editar" opens the existing Django admin change form for that user.
+        url = reverse("admin:accounts_user_change", args=[record.pk])
+        return format_html(
+            '<a href="{}" class="btn btn-sm btn-outline-primary">Editar</a>', url
+        )
+
     class Meta:
         model = User
-        fields = ("name", "username", "email", "role", "is_active", "last_login")
+        fields = ("name", "username", "email", "role", "is_active", "last_login", "edit")
         template_name = "django_tables2/bootstrap5.html"
         attrs = {"class": "table table-sm table-hover align-middle mb-0"}
         empty_text = "Nenhum utilizador encontrado."
         per_page = 25
         order_by = "username"
-
-    
-    

@@ -15,7 +15,7 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView):
     template_name = "accounts/user_list.html"
 
     def get_queryset(self):
-        return list_users()
+        return list_users(self.request.GET.get("q"))
     
     def test_func(self):
         return self.request.user.role == "administrator"
