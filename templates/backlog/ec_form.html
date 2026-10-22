@@ -46,7 +46,7 @@
           </div>
         </div>
         <div class="mb-3 mt-3">
-          <label class="form-label" for="{{ form.document.id_for_label }}">Carregar Documento (.docx / .pdf)</label>
+          <label class="form-label" for="{{ form.document.id_for_label }}">Carregar Documento (.docx / .pdf) <span class="text-danger">*</span></label>
           {{ form.document }}
           {% for error in form.document.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
         </div>

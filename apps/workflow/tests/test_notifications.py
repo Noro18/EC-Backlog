@@ -8,6 +8,7 @@ from django.urls import reverse
 from apps.accounts.models import User
 from apps.backlog.models import EC
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
+from apps.backlog.tests.test_views import docx_file
 from apps.documents.tests.factories import DocumentVersionFactory
 from apps.workflow.notifications import send_cd_assigned_email, send_decision_email
 from apps.workflow.services import approve_ec
@@ -32,6 +33,7 @@ class TestCDAssignmentNotification:
                     "description": "Trocar o resistor R12",
                     "release": release.pk,
                     "responsible_cd": cd.pk,
+                    "document": docx_file(),
                 },
             )
         assert response.status_code == 302  # the EC was really created
@@ -55,6 +57,7 @@ class TestCDAssignmentNotification:
                     "description": "Trocar o resistor R12",
                     "release": release.pk,
                     "responsible_cd": cd.pk,
+                    "document": docx_file(),
                 },
             )
 
