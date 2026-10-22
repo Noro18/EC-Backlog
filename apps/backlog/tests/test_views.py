@@ -23,6 +23,15 @@ from apps.documents.models import DocumentVersion
 pytestmark = pytest.mark.django_db  # marka wainihra test ida access o sentuh database ka lae
 
 
+def docx_file(name="spec.docx"):
+    """A minimal valid .docx payload — every EC-create POST needs one now."""
+    return SimpleUploadedFile(
+        name,
+        b"dummy content",
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
 class TestReleaseList:
     def test_returns_200(self, client):
         response = client.get(reverse("backlog:release_list"))
@@ -109,6 +118,7 @@ class TestReleaseList:
             response.content.decode()
         )
         assert "action" not in table.columns.names()
+
 
 class TestECListVisibility:
     """RF01 / access control — each role sees only its own ECs."""
@@ -374,6 +384,7 @@ class TestNewECRoleGate:
                 "description": "Administrador também pode criar",
                 "release": release.pk,
                 "responsible_cd": cd.pk,
+                "document": docx_file("adm.docx"),
             },
         )
         assert response.status_code == 302
@@ -426,6 +437,7 @@ class TestNewECForm:
                 "description": "Trocar o resistor R12",
                 "release": release.pk,
                 "responsible_cd": cd.pk,
+                "document": docx_file(),
             },
         )
         assert response.status_code == 302
@@ -439,6 +451,55 @@ class TestNewECForm:
         page = client.get(reverse("backlog:ec_list")).content.decode()
         assert "criada com sucesso" in page
 
+    def test_post_without_document_is_rejected(self, client):
+        """EC_CREATE_DOCUMENT_REQUIRED.md test 1: no file → no EC at all."""
+        cd = UserFactory(role=User.Role.CD)
+        release = ReleaseFactory()
+        self._login_requester(client)
+
+        response = client.post(
+            reverse("backlog:ec_form"),
+            data={
+                "reference": "CR2026042",
+                "description": "Trocar o resistor R12",
+                "release": release.pk,
+                "responsible_cd": cd.pk,
+            },
+        )
+        assert response.status_code == 200
+        assert "document" in response.context["form"].errors
+        assert EC.objects.count() == 0
+        assert DocumentVersion.objects.count() == 0
+
+    def test_failed_attempt_consumes_no_ec_number(self, client):
+        """EC_CREATE_DOCUMENT_REQUIRED.md test 2: the first success is still -001."""
+        cd = UserFactory(role=User.Role.CD)
+        release = ReleaseFactory()
+        self._login_requester(client)
+        payload = {
+            "reference": "CR2026042",
+            "description": "Trocar o resistor R12",
+            "release": release.pk,
+            "responsible_cd": cd.pk,
+        }
+
+        client.post(reverse("backlog:ec_form"), data=payload)  # no document → rejected
+
+        payload["document"] = docx_file()
+        response = client.post(reverse("backlog:ec_form"), data=payload)
+        assert response.status_code == 302
+        assert EC.objects.get().ec_code == f"{timezone.localdate().year}-001"
+
+    def test_document_field_is_required_on_get(self, client):
+        """EC_CREATE_DOCUMENT_REQUIRED.md test 3: required flag + * marker in the label."""
+        self._login_requester(client)
+        response = client.get(reverse("backlog:ec_form"))
+        assert response.context["form"].fields["document"].required is True
+        assert (
+            'Carregar Documento (.docx / .pdf) <span class="text-danger">*</span>'
+            in response.content.decode()
+        )
+
     def test_blank_description_is_rejected(self, client):
         cd = UserFactory(role=User.Role.CD)
         release = ReleaseFactory()
@@ -451,6 +512,7 @@ class TestNewECForm:
                 "description": "",
                 "release": release.pk,
                 "responsible_cd": cd.pk,
+                "document": docx_file(),
             },
         )
         assert response.status_code == 200
@@ -470,6 +532,7 @@ class TestNewECForm:
                 "description": "Não cabe",
                 "release": full.pk,
                 "responsible_cd": cd.pk,
+                "document": docx_file(),
             },
         )
         assert response.status_code == 200
@@ -486,6 +549,7 @@ class TestNewECForm:
                 "description": f"solicitação {i}",
                 "release": release.pk,
                 "responsible_cd": cd.pk,
+                "document": docx_file(f"spec{i}.docx"),
             }
             for i in range(1, 3)
         ]
@@ -538,11 +602,7 @@ class TestNewECForm:
         release = ReleaseFactory()
         client.force_login(requester)
 
-        docx = SimpleUploadedFile(
-            "test.docx",
-            b"dummy content",
-            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
+        docx = docx_file("test.docx")
 
         response = client.post(
             reverse("backlog:ec_form"),
@@ -618,6 +678,7 @@ class TestReleaseOnDemand:
                 "description": "Precisa release foun",
                 "release": NEW_RELEASE,
                 "responsible_cd": cd.pk,
+                "document": docx_file(),
             },
         )
 
@@ -642,6 +703,7 @@ class TestReleaseOnDemand:
                 "description": "Hakarak foun maski tuan mamuk",
                 "release": NEW_RELEASE,
                 "responsible_cd": cd.pk,
+                "document": docx_file(),
             },
         )
 
@@ -664,6 +726,7 @@ class TestReleaseOnDemand:
                 "description": "Depois haree iha dropdown",
                 "release": NEW_RELEASE,
                 "responsible_cd": cd.pk,
+                "document": docx_file(),
             },
         )
         assert response.status_code == 302
@@ -683,6 +746,7 @@ class TestReleaseOnDemand:
                 "description": "Release falsu",
                 "release": "999999",
                 "responsible_cd": UserFactory(role=User.Role.CD).pk,
+                "document": docx_file(),
             },
         )
 
@@ -721,6 +785,7 @@ class TestReferencePrefixSuggestions:
                 "description": "Trocar o resistor R12",
                 "release": release.pk,
                 "responsible_cd": cd.pk,
+                "document": docx_file(),
             },
         )
         assert response.status_code == 302

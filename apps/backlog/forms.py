@@ -92,11 +92,14 @@ class ECCreateForm(forms.ModelForm):
     )
 
     # Not an EC model field — the file becomes a DocumentVersion row, written by
-    # documents.services.create_first_version (RF06). Optional (Assumption 6).
+    # documents.services.create_first_version (RF06). MANDATORY for a new EC
+    # (EC_CREATE_DOCUMENT_REQUIRED.md, amends EC_CREATE.md Assumption 6): SRD § 6
+    # step 4 + RF07 make the upload precede the assignment, and rejecting here —
+    # before form_valid — means no EC row, no number, no release seat, no email.
     # NO validators from apps.documents here: ARCHITECTURE.md forbids backlog.forms
     # importing documents — extension/size checks run inside the documents service.
     document = forms.FileField(
         label="Carregar Documento (.docx / .pdf)",
-        required=False,
+        required=True,
         widget=forms.ClearableFileInput(attrs={"class": "form-control", "accept": ".docx,.pdf"}),
     )

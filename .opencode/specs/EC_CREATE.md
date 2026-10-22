@@ -7,8 +7,8 @@ backlog.
 
 - As an authenticated requester, I fill in the reference, description, a release and a CD, and
   submit; the system assigns the **EC ID itself** (RF01) instead of asking me to type it.
-- As an authenticated requester, I attach a document if I have one (RF06) and it is stored as
-  version `v1.0` with my name on it.
+- As an authenticated requester, I attach the document (RF06) — it is **mandatory** — and it
+  is stored as version `v1.0` with my name on it.
 - As an authenticated requester, I land on the EC list with a success message and my new EC
   in it, showing `year-sequence` (e.g. `2026-001`).
 - As an anonymous visitor I am sent to the login page — a form that writes data is not public.
@@ -44,7 +44,9 @@ nothing else.
    slice **never assigns them** (ARCHITECTURE § status changes go through `workflow` only).
 5. The release dropdown lists only releases that are **open and have room**; full and closed
    ones are not offered at all.
-6. The document field is **optional** — an EC without a document is a valid submission.
+6. The document field was **optional** here — superseded 2026-10-22 by
+   `EC_CREATE_DOCUMENT_REQUIRED.md` (agreed: no EC may exist without its document; SRD § 6
+   step 4 + RF07 put the upload before the assignment).
 
 ## Decisions (agreed 2026-10-05)
 
@@ -263,7 +265,8 @@ Status key: ⏳ pending · ✅ green. All 20 tests are green on branch `feat/ec-
 - Posting a full or closed release from a crafted request creates nothing.
 - The 11th EC against capacity 10 is refused by the service, not by the HTML.
 - The dropdown makes a constant number of queries as releases grow.
-- An optional upload lands as `DocumentVersion` `v1.0`; the rest of the form works with no file.
+- An upload lands as `DocumentVersion` `v1.0`; posting **without** a file creates nothing
+  (`EC_CREATE_DOCUMENT_REQUIRED.md`).
 - The success message is visible after the redirect.
 - New tests pass, the existing 63 stay green, `ruff check` + `ruff format` clean.
 
