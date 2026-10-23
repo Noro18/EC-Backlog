@@ -2,8 +2,13 @@
 
 ## Objective
 
-Load the existing 2019–2026 EC history into the system in **one deliberate pass**, keeping the
-identifiers already assigned, without touching the workflow that governs live ECs.
+Load the existing EC history into the system in **one deliberate pass**, keeping the identifiers
+already assigned, without touching the workflow that governs live ECs.
+
+> **Scope confirmed 2026-10-23: only 2026 exists.** The cleaned dataset has 48 rows, all 2026.
+> SRD RNF04 says 2019–2026 (`docs/System_requirements.md:194`); data for 2019–2025 was not
+> available, so this spec delivers 2026 and records the gap rather than inventing rows. If the
+> older years appear later, the same command is re-run — the contract does not change.
 
 - As an Administrator, I run the command **without `--commit`** and read a report of exactly what
   would be written (rows, per-status counts, refused rows with line numbers). Nothing changes.
@@ -21,10 +26,10 @@ identifiers already assigned, without touching the workflow that governs live EC
 
 1. The **input is the cleaned file produced by the user's Jupyter notebook** — the notebook is the
    Transform step and lives **outside** this repository. This command is only the Load step.
-2. The cleaned sample observed on 2026-10-23 has the columns
-   `year, number_sequence, Referencia, Descrisaun, year_release, number_sequence_release, status,
-   go_live`, where `number_sequence` is **empty**, `status` holds `Closed` / `is_open`, and
-   `go_live` mixes ISO dates with the literal string `"null"`.
+2. The cleaned dataset confirmed on 2026-10-23 has **48 rows, all `year = 2026`**, with columns
+   `year, number_sequence, Referencia, Deskrisaun, year_release, number_sequence_release, status,
+   go_live`. `number_sequence` is **filled 1–48, unique and gap-free**; `status` holds `Closed`
+   (6 rows) and `is_open` (42 rows); `go_live` mixes ISO dates with the literal string `"null"`.
 3. `django-import-export>=4.4.1` is already a dependency (`pyproject.toml:15`) and `"import_export"`
    is already in `INSTALLED_APPS` (`config/settings/base.py:53`). **No `openpyxl`** is installed.
 4. Baseline on this branch (`feat/historical-import`, `upstream/main` = `1cab42c`, PR #73 merged):
@@ -156,15 +161,28 @@ year,number_sequence,reference,description,status
 **Report format** (stdout, dry-run and commit alike):
 
 ```
-File: limpo.csv (312 rows)
-Years: 2019..2026
-Status: closed=287, in_validation=11, sent_to_des=8, approved=6
-Refused (3):
-  line  42: status "is_open" has no mapping
-  line 118: number_sequence is blank
-  line 260: duplicate (2026, 12) already in the file
+File: limpo.csv (48 rows)
+Years: 2026..2026
+Status: closed=6, unmapped=42
+Refused (43):
+  line  3: status "is_open" has no mapping
+  ...
+  line 48: reference is blank
 Dry-run only: nothing was written. Re-run with --commit to load.
 ```
+
+**Known defects in the current cleaned file (2026, 48 rows)** — fixed in the notebook (Transform),
+not in code:
+
+| Defect | Rows | Effect here |
+|---|---|---|
+| `status = "is_open"` — a `Release` flag, not an `EC.Status` | 42 | refused until the mapping is decided |
+| `Referencia` is null | index 47 | refused (`EC.reference` is required) |
+| column names `Referencia` / `Deskrisaun` | all | must be renamed to `reference` / `description` |
+| extra columns `year_release`, `number_sequence_release`, `go_live` | all | must be dropped for v1 (strict contract) |
+| leading / trailing spaces in `Deskrisaun` | indices 8, 10, 29 | accepted, but `.str.strip()` first |
+| duplicate `Referencia` (`CR2026019` ×2, `CR2026025` ×2) | 4 | accepted (no unique constraint) — confirm it is intentional |
+| `R2026006.1` | index 18 | likely missing `C` — confirm with the source |
 
 ## Edge Cases
 
@@ -185,6 +203,10 @@ Dry-run only: nothing was written. Re-run with --commit to load.
 10. **Year range** — no rule is invented here. The report prints `min..max` year so a human can
     spot a corrupted year before committing.
 11. **Order of writes** — within one `transaction.atomic()`; a crash mid-file leaves zero rows.
+12. **Blank `reference`** → refused (`EC.reference` is required). A single blank row blocks
+    `--commit` for the whole file, so it must be fixed in the notebook.
+13. **Duplicate `reference` with different EC numbers** → accepted, because there is no unique
+    constraint on `reference` yet (issue #36). Only `(year, number_sequence)` is enforced here.
 
 ## Project Structure
 
@@ -271,6 +293,8 @@ Expected suite: **252 = 242 + 10**.
 - [ ] Any refused row aborts `--commit` with a non-zero exit and **zero** rows written.
 - [ ] `is_open` is refused, not translated, until a mapping decision is recorded here.
 - [ ] `next_ec_number(2026)` after the import equals `max(imported) + 1`.
+- [ ] The 48-row 2026 file is read end to end: dry-run reports `closed=6` and the 42 unmapped rows
+      with their line numbers.
 - [ ] 252 tests green, `ruff check .` clean, no migration generated.
 
 ## Deferred
@@ -286,12 +310,18 @@ Expected suite: **252 = 242 + 10**.
 
 ## Open Questions
 
-- **Exact `status` values across the whole file.** Only `Closed` and `is_open` were seen in the
-  sample. Needs `df["status"].value_counts(dropna=False)` before the mapping table can be closed.
-- **Where the real EC status went.** `is_open` is a Release flag; if the EC status was lost in the
-  merge, the notebook must recover it from the source sheet — code cannot invent it.
-- **How `number_sequence` is derived** (which reference patterns are valid, how `RT202629411` is
-  read). Transform-side decision, validated by the dry-run.
+- **BLOCKING — what `is_open` means.** Value counts for 2026 are `Closed` = 6 and `is_open` = 42.
+  `is_open` is a `Release` flag, not one of the six `EC.Status` values. Decision on 2026-10-23:
+  **check the source Excel first** for a real EC status column (`Concluída`, `Em execução`, …).
+  Until that is answered, `--commit` is impossible by design — it would abort on the 42 refusals.
+  Fallbacks if the source has no status: `sent_to_des` (every row already carries a Release),
+  `in_validation`, or treat all as `closed` and use `go_live` as the completion marker.
+  Fallback choice is not made here.
+- **`number_sequence` is no longer open** — the cleaned file fills it 1–48, so Decision 1 needs no
+  derivation rule. `RT202629411` and friends stay free text in `reference`.
+- **2019–2025 rows do not exist** — confirmed 2026-10-23, recorded in *Objective*. Nothing to do.
+- **Duplicate `Referencia` values** (`CR2026019`, `CR2026025`) — accepted by the model, but confirm
+  with the source that they are two ECs of one request, not a cleaning accident.
 - **CSV or XLSX** as the notebook's output.
 - **Whether historical Releases are wanted at all** (Deferred item 1), and who owns that decision.
 
