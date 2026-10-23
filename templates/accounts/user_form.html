@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Novo Utilizador — Sistema de Gestão de Backlog EC{% endblock %}
+{% block title %}{% if is_edit %}Editar Utilizador{% else %}Novo Utilizador{% endif %} — Sistema de Gestão de Backlog EC{% endblock %}
 
 {% block content %}
 <div class="mb-4">
-  <h4 class="mb-1"><i class="bi bi-person-plus me-1"></i> Novo Utilizador</h4>
-  <p class="text-muted mb-0">Crie o acesso e escolha o perfil do utilizador.</p>
+  <h4 class="mb-1">
+    {% if is_edit %}<i class="bi bi-person-gear me-1"></i> Editar Utilizador{% else %}<i class="bi bi-person-plus me-1"></i> Novo Utilizador{% endif %}
+  </h4>
+  <p class="text-muted mb-0">
+    {% if is_edit %}Atualize os dados e o perfil do utilizador.{% else %}Crie o acesso e escolha o perfil do utilizador.{% endif %}
+  </p>
 </div>
 
 <div class="row g-3">
@@ -43,6 +47,7 @@
             {% for error in form.is_active.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
           </div>
         </div>
+        {% if not is_edit %}
         <hr class="my-4">
         <div class="mb-3">
           <label class="form-label" for="{{ form.password1.id_for_label }}">Palavra-passe <span class="text-danger">*</span></label>
@@ -55,11 +60,14 @@
           {{ form.password2 }}
           {% for error in form.password2.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
         </div>
+        {% endif %}
         {% if form.non_field_errors %}
           <div class="text-danger small mt-3">{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>
         {% endif %}
         <div class="d-flex gap-2 mt-4">
-          <button type="submit" class="btn btn-dark"><i class="bi bi-person-plus me-1"></i> Criar Utilizador</button>
+          <button type="submit" class="btn btn-dark">
+            {% if is_edit %}<i class="bi bi-check2 me-1"></i> Guardar alterações{% else %}<i class="bi bi-person-plus me-1"></i> Criar Utilizador{% endif %}
+          </button>
           <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Cancelar</a>
         </div>
       </form>

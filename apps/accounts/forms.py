@@ -51,3 +51,40 @@ class UserCreateForm(UserCreationForm):
         self.fields["password2"].label = "Confirmar palavra-passe"
         self.fields["password2"].widget.attrs.update({"class": "form-control"})
         self.fields["password2"].help_text = ""
+
+
+class UserUpdateForm(forms.ModelForm):
+    """User update form for administrators. Username is immutable."""
+
+    class Meta:
+        model = User
+        fields = ("username", "name", "email", "role", "is_active")
+        labels = {
+            "username": "Nome de utilizador",
+            "name": "Nome",
+            "email": "Email",
+            "role": "Perfil",
+            "is_active": "Estado",
+        }
+        widgets = {
+            "username": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "ex.: maria.gusmao",
+                    "autocomplete": "off",
+                }
+            ),
+            "name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "ex.: Maria da Costa"}
+            ),
+            "email": forms.EmailInput(
+                attrs={"class": "form-control", "placeholder": "ex.: maria@example.com"}
+            ),
+            "role": forms.Select(attrs={"class": "form-select"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].disabled = True
+        self.fields["name"].required = True

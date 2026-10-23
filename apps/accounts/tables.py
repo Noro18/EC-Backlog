@@ -1,4 +1,5 @@
 import django_tables2 as tables
+from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -40,10 +41,20 @@ class UserTable(tables.Table):
         return record.last_login.strftime("%d/%m/%Y %H:%M")
 
     def render_edit(self, record):
-        # "Editar" opens the existing Django admin change form for that user.
-        url = reverse("admin:accounts_user_change", args=[record.pk])
+        edit_url = reverse("accounts:user_update", args=[record.pk])
+        deactivate_url = reverse("accounts:user_deactivate", args=[record.pk])
+        csrf = get_token(self.request) if hasattr(self, "request") and self.request else ""
         return format_html(
-            '<a href="{}" class="btn btn-sm btn-outline-primary">Editar</a>', url
+            '<div class="d-flex gap-1 align-items-center">'
+            '<a href="{}" class="btn btn-sm btn-outline-primary">Editar</a>'
+            '<form method="post" action="{}" class="m-0" onsubmit="return confirm(\'Desativar utilizador?\');">'
+            '<input type="hidden" name="csrfmiddlewaretoken" value="{}">'
+            '<button type="submit" class="btn btn-sm btn-outline-danger">Desativo</button>'
+            '</form>'
+            '</div>',
+            edit_url,
+            deactivate_url,
+            csrf,
         )
 
     class Meta:
