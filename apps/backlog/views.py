@@ -7,7 +7,7 @@ from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, TemplateView, View
+from django.views.generic import CreateView, DetailView, TemplateView, UpdateView, View
 from django_tables2 import RequestConfig, SingleTableView
 
 from apps.accounts.models import User
@@ -16,7 +16,7 @@ from apps.workflow.notifications import (
     queue_cd_assigned,  # documented exception, ARCHITECTURE.md §5
 )
 
-from .forms import ECCreateForm
+from .forms import ECCreateForm, ECEditForm
 from .models import EC, Release
 from .selectors import (
     admin_dashboard,
@@ -29,7 +29,7 @@ from .selectors import (
     search_ecs,
     visible_ecs,
 )
-from .services import create_ec, create_release, record_go_live
+from .services import can_edit_ec, create_ec, create_release, record_go_live, update_ec
 from .tables import (
     EC_BADGE_CLASSES,
     RELEASE_BADGE_CLASSES,
@@ -150,7 +150,44 @@ class ECDetailView(LoginRequiredMixin, DetailView):
         ec = self.object
         context["status_badge_class"] = EC_BADGE_CLASSES.get(ec.status, "text-bg-secondary")
         context["timeline"] = build_ec_timeline(ec)
+        context["can_edit"] = can_edit_ec(ec, self.request.user)
         return context
+
+
+class ECUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """Issue #67 / EC_EDIT.md: correct the content of an EC that is in flight.
+
+    The save goes through `update_ec`, never through `form.save()` — the
+    service re-checks the status, the ownership and the Release capacity.
+    """
+
+    model = EC
+    form_class = ECEditForm
+    template_name = "backlog/ec_edit.html"
+    context_object_name = "ec"
+
+    def test_func(self):
+        return can_edit_ec(self.get_object(), self.request.user)
+
+    def form_valid(self, form):
+        try:
+            update_ec(
+                self.object,
+                self.request.user,
+                reference=form.cleaned_data["reference"],
+                description=form.cleaned_data["description"],
+                release=form.cleaned_data["release"],
+                responsible_cd=form.cleaned_data["responsible_cd"],
+            )
+        except (ValidationError, PermissionDenied) as error:
+            # A stale tab (status or capacity moved on) is a form error, not a 500.
+            form.add_error(None, getattr(error, "messages", str(error)))
+            return self.form_invalid(form)
+        messages.success(self.request, f"EC {self.object.ec_code} atualizada.")
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse_lazy("backlog:ec_detail", kwargs={"pk": self.object.pk})
 
 
 class ReleaseDetailView(DetailView):

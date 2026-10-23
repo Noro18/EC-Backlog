@@ -918,3 +918,211 @@ class TestECDetail:
         assert first.context["ec"] == ec
         assert second.context["ec"] == ec
         assert len(large) == len(small)
+
+
+class TestECEditView:
+    """EC_EDIT.md (issue #67): edit the content of an in-flight EC."""
+
+    def _data(self, ec, **overrides):
+        data = {
+            "reference": ec.reference,
+            "description": ec.description,
+            "release": ec.release.pk,
+            "responsible_cd": ec.responsible_cd_id or UserFactory(role=User.Role.CD).pk,
+        }
+        data.update(overrides)
+        return data
+
+    def test_requires_login(self, client):
+        ec = ECFactory()
+        response = client.get(reverse("backlog:ec_edit", args=[ec.pk]))
+
+        assert response.status_code == 302
+        assert reverse("accounts:login") in response.url
+
+    def test_owner_gets_a_prefilled_form(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        client.force_login(ec.requester)
+
+        response = client.get(reverse("backlog:ec_edit", args=[ec.pk]))
+
+        assert response.status_code == 200
+        form = response.context["form"]
+        assert form["reference"].value() == ec.reference
+        assert form["description"].value() == ec.description
+        assert int(form["release"].value()) == ec.release_id
+
+    def test_form_exposes_only_the_editable_fields(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        client.force_login(ec.requester)
+
+        form = client.get(reverse("backlog:ec_edit", args=[ec.pk])).context["form"]
+
+        assert list(form.fields) == [
+            "reference",
+            "description",
+            "release",
+            "responsible_cd",
+        ]
+        assert form.fields["release"].required is True
+
+    def test_owner_saves_and_returns_to_the_detail_page(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        client.force_login(ec.requester)
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data=self._data(ec, reference="CR2026555", description="Texto revisto"),
+            follow=True,
+        )
+
+        assert response.redirect_chain[-1][0] == reverse("backlog:ec_detail", args=[ec.pk])
+        assert "atualizada" in response.content.decode()
+        ec.refresh_from_db()
+        assert ec.reference == "CR2026555"
+        assert ec.description == "Texto revisto"
+
+    def test_non_owner_gets_403(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+
+        response = client.get(reverse("backlog:ec_edit", args=[ec.pk]))
+
+        assert response.status_code == 403
+
+    def test_cd_gets_403(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        client.force_login(UserFactory(role=User.Role.CD))
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]), data=self._data(ec)
+        )
+
+        assert response.status_code == 403
+
+    def test_administrator_can_edit_an_imported_ec(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION, requester=None, is_imported=True)
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data=self._data(ec, reference="CR2026444"),
+        )
+
+        assert response.status_code == 302
+        ec.refresh_from_db()
+        assert ec.reference == "CR2026444"
+
+    def test_approved_ec_is_refused(self, client):
+        ec = ECFactory(status=EC.Status.APPROVED)
+        client.force_login(ec.requester)
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data=self._data(ec, reference="CR2026333"),
+        )
+
+        assert response.status_code == 403
+        ec.refresh_from_db()
+        assert ec.reference != "CR2026333"
+
+    def test_identity_and_status_cannot_be_smuggled_in(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION, year=2026, number_sequence=7)
+        client.force_login(ec.requester)
+
+        client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data=self._data(
+                ec,
+                year=1999,
+                number_sequence=99,
+                status=EC.Status.CLOSED,
+                creation_date="1999-01-01",
+                implemented_at="1999-01-01T00:00",
+                is_imported="true",
+            ),
+        )
+
+        ec.refresh_from_db()
+        assert (ec.year, ec.number_sequence) == (2026, 7)
+        assert ec.status == EC.Status.IN_VALIDATION
+        assert ec.creation_date != "1999-01-01"
+        assert ec.is_imported is False
+
+    def test_full_target_release_is_refused(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        target = ReleaseFactory(year=2027, number_sequence=5, capacity=1)
+        ECFactory(release=target, year=2027, number_sequence=1)
+        client.force_login(ec.requester)
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data=self._data(ec, release=target.pk),
+        )
+
+        assert response.status_code == 200
+        assert response.context["form"].errors
+        ec.refresh_from_db()
+        assert ec.release != target
+
+    def test_keeping_a_full_current_release_works(self, client):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        release = ReleaseFactory(capacity=1)
+        ec = ECFactory(requester=requester, release=release, status=EC.Status.IN_VALIDATION)
+        client.force_login(requester)
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data=self._data(ec, description="Só a descrição"),
+        )
+
+        assert response.status_code == 302
+        ec.refresh_from_db()
+        assert ec.description == "Só a descrição"
+
+    def test_detail_shows_the_edit_button_only_for_the_owner(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+
+        client.force_login(ec.requester)
+        owner_html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
+        assert reverse("backlog:ec_edit", args=[ec.pk]) in owner_html
+        assert "Editar" in owner_html
+
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+        other = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+        assert other.status_code == 200
+        assert other.context["can_edit"] is False
+        assert "Editar" not in other.content.decode()
+
+    def test_owner_changes_the_responsible_cd(self, client):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        old_cd = UserFactory(role=User.Role.CD)
+        new_cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(
+            requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION
+        )
+        client.force_login(requester)
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data=self._data(ec, responsible_cd=new_cd.pk),
+        )
+
+        assert response.status_code == 302
+        ec.refresh_from_db()
+        assert ec.responsible_cd == new_cd
+
+    def test_a_non_cd_responsible_is_refused(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        intruder = UserFactory(role=User.Role.REQUESTER)
+        client.force_login(ec.requester)
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data=self._data(ec, responsible_cd=intruder.pk),
+        )
+
+        assert response.status_code == 200
+        assert "responsible_cd" in response.context["form"].errors
+        ec.refresh_from_db()
+        assert ec.responsible_cd_id != intruder.pk
