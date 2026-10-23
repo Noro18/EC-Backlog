@@ -6,7 +6,8 @@
 still in flight, without minting a second EC.
 
 - As the requester who created an EC, I open *Editar* from the detail page and fix a typo in the
-  `reference`, rewrite the `description`, or move the EC to another open Release.
+  `reference`, rewrite the `description`, move the EC to another open Release, or hand it to
+  another CD.
 - As the requester, I see the form pre-filled with what is saved today, so I change one field and
   leave the rest untouched.
 - As the requester, when I save I return to the detail page and see my new values plus a success
@@ -19,14 +20,14 @@ still in flight, without minting a second EC.
 **Why this exists — SRD mapping.** The SRD has no RF for *free editing* of an EC; this issue is
 explicit that it needs a product decision. What the SRD does anchor: RF01 (identity is generated and
 immutable), RF02 (an EC may be associated with an **open** Release, one-to-many, capacity 10),
-RF03 (`creation_date` recorded at submission), RF07 (`responsible_cd` is its own step), RNF02 (every
-change is audited with user + timestamp), RNF05 (usable UI). The gaps are marked as decisions below
-and need confirmation before code.
+RF03 (`creation_date` recorded at submission), RF07 (`responsible_cd` is a **manual** selection),
+RNF02 (every change is audited with user + timestamp), RNF05 (usable UI). The gaps are marked as
+decisions below.
 
 **Out of scope:** `status` (workflow services only), `year` / `number_sequence` (identity), the
-document (RF05 already versioned), `responsible_cd` (RF07), `requester` reassignment, deleting an
-EC, bulk edit from the list, creating a new Release from the edit form (RF02 on-demand stays on the
-create form), and any DB constraint on `reference` (issue #36).
+document (RF05 already versioned), `requester` reassignment, deleting an EC, bulk edit from the
+list, creating a new Release from the edit form (RF02 on-demand stays on the create form), and any
+DB constraint on `reference` (issue #36).
 
 ## Assumptions
 
@@ -43,12 +44,13 @@ create form), and any DB constraint on `reference` (issue #36).
 
 ## Decisions (proposed 2026-10-23 — confirm before code)
 
-1. **Editable fields: `reference`, `description`, `release` — nothing else.**
+1. **Editable fields: `reference`, `description`, `release`, `responsible_cd` — nothing else.**
    `creation_date` is excluded: RF03 says it is recorded at submission (a fact, not content), and
-   letting anyone re-date an EC would falsify the backlog history. `requester` and
-   `responsible_cd` are excluded because the issue lists them as separate steps
-   (`workflow:resubmit_ec` already reassigns the CD when a rejected EC is resubmitted).
-   `status`, `implemented_at`, `year`, `number_sequence`, `is_imported` are never exposed.
+   letting anyone re-date an EC would falsify the backlog history. `responsible_cd` was added on
+   2026-10-23 (amendment): RF07 makes the CD a manual selection, and reassignment is allowed only
+   while the content is in flight and only to a user whose role is `cd`. `requester` stays out
+   (issue #67). `status`, `implemented_at`, `year`, `number_sequence`, `is_imported` are never
+   exposed.
 2. **Who may edit: the owning requester, or an Administrator.** CD cannot (RF09: the CD's role ends
    at approve/reject); DES cannot; another requester cannot. *This needs confirmation*: SRD §4 gives
    the Administrator "users, profiles and numbering parameters" and calls the dedicated admin
@@ -67,8 +69,9 @@ create form), and any DB constraint on `reference` (issue #36).
    owns the document upload (RF06), the CD assignment (RF07) and the `__new__` Release sentinel
    (RF02) — none of which belong here, and reusing it would silently widen this slice.
 6. **Rules live in `services.py`; the view orchestrates.** New `update_ec(ec, user, *, reference,
-   description, release)` plus a pure predicate `can_edit_ec(ec, user)` used by the detail page and
-   by the update view's `test_func` (`ARCHITECTURE.md §5`, thin views).
+   description, release, responsible_cd)` plus a pure predicate `can_edit_ec(ec, user)` used by the
+   detail page and by the update view's `test_func` (`ARCHITECTURE.md §5`, thin views). The CD role
+   is re-checked in the service, so a crafted POST cannot assign a requester as CD.
 7. **Forbidden = 403, not a redirect**, matching `NewECView`, `ReviewECView` and `RouteToDESView`.
    Anonymous still redirects to login (`LoginRequiredMixin`).
 8. **Success goes back to the EC detail page**, because that is where the user came from; the list
@@ -194,10 +197,15 @@ def can_edit_ec(ec, user) -> bool:
     return user.role == User.Role.ADMINISTRATOR or ec.requester_id == user.pk
 
 
-def update_ec(ec, user, *, reference, description, release):
+def update_ec(ec, user, *, reference, description, release, responsible_cd):
     if not can_edit_ec(ec, user):
         raise PermissionDenied("This EC cannot be edited.")
     with transaction.atomic():
+        if responsible_cd is not None and responsible_cd.role != User.Role.CD:
+            raise ValidationError("The responsible must be a CD user.")
+        if responsible_cd is not None and responsible_cd.pk != ec.responsible_cd_id:
+            ec.responsible_cd = responsible_cd
+            fields.append("responsible_cd")
         if release is not None and release.pk != ec.release_id:
             fresh = Release.objects.get(pk=release.pk)
             if not fresh.is_open or fresh.ec_count >= fresh.capacity:
@@ -239,14 +247,16 @@ pytest.mark.django_db`, one `class Test...:` per behaviour, data from `apps/back
 | 10 | move to a closed Release refused | edge 3 |
 | 11 | keeping a full current Release works | edge 1 |
 | 12 | GET pre-fills the form | UX |
-| 13 | form exposes only the three fields | Decision 1 |
+| 13 | form exposes only the four fields | Decision 1 |
 | 14 | POST redirects to detail + message | Decision 8 |
 | 15 | POST smuggled `status` is ignored | edge 10 |
 | 16 | anonymous GET → login | auth |
 | 17 | update writes a `LogEntry` with the actor | RNF02 |
 | 18 | 403 also from the detail *button* context (`can_edit=False`) | Decision 2 |
 
-Expected suite: **242 + 18 = 260**.
+Expected suite: **242 + 33 = 275** (18 service, 14 view, 1 auditlog).
+   The CD amendment (2026-10-23) adds: CD is saved; a requester/DES cannot be the CD (nothing
+   written); the view saves the new CD; the view refuses a non-CD user.
 
 ## Boundaries
 
@@ -262,15 +272,16 @@ Expected suite: **242 + 18 = 260**.
 ## Success Criteria
 
 - [ ] *Editar* appears on the detail page only for an owner (or admin) in an editable status.
-- [ ] The form is pre-filled and contains exactly `reference`, `description`, `release`.
+- [ ] The form is pre-filled and contains exactly `reference`, `description`, `release`,
+      `responsible_cd`.
 - [ ] Saving returns to the detail page with the new values and a success message.
-- [ ] `year`, `number_sequence`, `status`, `creation_date`, `implemented_at`, `requester`,
-      `responsible_cd` are not editable anywhere in the form or the POST.
+- [ ] `year`, `number_sequence`, `status`, `creation_date`, `implemented_at` and `requester` are
+      not editable anywhere in the form or the POST; `responsible_cd` only accepts a `cd` user.
 - [ ] A closed/full target Release is refused with a clear message; keeping a full current Release
       works.
 - [ ] Non-owner, CD, DES and terminal-status ECs get 403, never 500.
 - [ ] A `LogEntry` with `action=UPDATE` and the acting user is written (RNF02).
-- [ ] 260 tests green, `ruff check .` clean, no migration generated.
+- [ ] 275 tests green, `ruff check .` clean, no migration generated.
 
 ## Deferred
 
@@ -292,6 +303,10 @@ Expected suite: **242 + 18 = 260**.
   edited through resubmission?
 - **Should `creation_date` ever be correctable** (e.g. an EC submitted offline earlier)? Excluded
   now; RF03 treats it as a record.
+- **RF08 on CD reassignment** — editing the CD does **not** send the "assigned" email in this
+  slice. Notifying from `backlog.services` would break `ARCHITECTURE.md §5` (`backlog` must not
+  import `workflow`); it needs either a documented exception at the view call site or moving the
+  edit action into `workflow`. Decide before relying on the reassignment for review routing.
 
 ## Branch Name
 
