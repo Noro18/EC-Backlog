@@ -5,10 +5,25 @@ Same module-level `pytestmark` and `class Test...:` style as
 """
 
 import pytest
+from auditlog.models import LogEntry
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.hashers import identify_hasher
 from django.urls import reverse
 
 from apps.accounts.tables import ROLE_BADGE_CLASSES
 from apps.backlog.tests.factories import UserFactory
+
+User = get_user_model()
+
+NEW_USER = {
+    "username": "nova.cria",
+    "name": "Nova Cria",
+    "email": "nova@example.com",
+    "role": "cd",
+    "is_active": "on",
+    "password1": "SenhaForte123!",
+    "password2": "SenhaForte123!",
+}
 
 pytestmark = pytest.mark.django_db
 
@@ -99,3 +114,81 @@ class TestUserList:
         response = client.get(reverse("accounts:user_list"))
 
         assert response.status_code == 403
+
+
+class TestUserCreateView:
+    """USER_CREATE.md — create form gate, save, audit and the repointed button."""
+
+    def test_administrator_sees_the_form_with_portuguese_labels(self, client):
+        client.force_login(UserFactory(role="administrator"))
+
+        html = client.get(reverse("accounts:user_create")).content.decode()
+
+        assert "Perfil" in html and "Palavra-passe" in html
+        assert 'name="role"' in html
+
+    def test_administrator_creates_a_user_and_returns_to_the_list(self, client):
+        client.force_login(UserFactory(role="administrator"))
+
+        response = client.post(reverse("accounts:user_create"), NEW_USER)
+
+        assert response.status_code == 302
+        assert response.url == reverse("accounts:user_list")
+        user = User.objects.get(username="nova.cria")
+        assert user.role == "cd"
+        assert user.is_active is True
+
+    def test_the_created_password_is_hashed_and_can_log_in(self, client):
+        client.force_login(UserFactory(role="administrator"))
+        client.post(reverse("accounts:user_create"), NEW_USER)
+
+        user = User.objects.get(username="nova.cria")
+
+        identify_hasher(user.password)  # raises ValueError if the value is plaintext
+        assert user.password != "SenhaForte123!"
+        assert authenticate(username="nova.cria", password="SenhaForte123!") == user
+
+    def test_the_created_user_reaches_the_audit_log(self, client):
+        admin = UserFactory(role="administrator")
+        client.force_login(admin)
+        client.post(reverse("accounts:user_create"), NEW_USER)
+
+        user = User.objects.get(username="nova.cria")
+        entry = LogEntry.objects.get(content_type__model="user", object_pk=str(user.pk))
+
+        assert entry.action == LogEntry.Action.CREATE
+        assert entry.actor == admin  # RNF02
+
+    def test_non_administrator_gets_403_and_creates_nothing(self, client):
+        client.force_login(UserFactory(role="requester"))
+
+        response = client.post(reverse("accounts:user_create"), NEW_USER)
+
+        assert response.status_code == 403
+        assert not User.objects.filter(username="nova.cria").exists()
+
+    def test_anonymous_post_redirects_to_login_and_creates_nothing(self, client):
+        response = client.post(reverse("accounts:user_create"), NEW_USER)
+
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("accounts:login"))
+        assert not User.objects.filter(username="nova.cria").exists()
+
+    def test_an_invalid_post_re_renders_with_errors_and_creates_nothing(self, client):
+        client.force_login(UserFactory(role="administrator"))
+
+        response = client.post(
+            reverse("accounts:user_create"), {**NEW_USER, "password2": "Errada456!"}
+        )
+
+        assert response.status_code == 200
+        assert "password2" in response.context["form"].errors
+        assert not User.objects.filter(username="nova.cria").exists()
+
+    def test_the_novo_utilizador_button_points_at_the_app_form(self, client):
+        client.force_login(UserFactory(role="administrator"))
+
+        html = client.get(reverse("accounts:user_list")).content.decode()
+
+        assert reverse("accounts:user_create") in html
+        assert "/admin/accounts/user/add/" not in html

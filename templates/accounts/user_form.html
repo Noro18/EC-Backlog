@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Utilizador — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h4 class="mb-1"><i class="bi bi-person-plus me-1"></i> Novo Utilizador</h4>
+  <p class="text-muted mb-0">Crie o acesso e escolha o perfil do utilizador.</p>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm p-4">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.username.id_for_label }}">Nome de utilizador <span class="text-danger">*</span></label>
+          {{ form.username }}
+          {% for error in form.username.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.name.id_for_label }}">Nome <span class="text-danger">*</span></label>
+          {{ form.name }}
+          {% for error in form.name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.email.id_for_label }}">Email <span class="text-danger">*</span></label>
+          {{ form.email }}
+          {% for error in form.email.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="{{ form.role.id_for_label }}">Perfil <span class="text-danger">*</span></label>
+            {{ form.role }}
+            {% for error in form.role.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="{{ form.is_active.id_for_label }}">Estado</label>
+            <div class="form-check mt-4">
+              {{ form.is_active }}
+              <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Ativo (pode iniciar sessão)</label>
+            </div>
+            {% for error in form.is_active.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+        </div>
+        <hr class="my-4">
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.password1.id_for_label }}">Palavra-passe <span class="text-danger">*</span></label>
+          {{ form.password1 }}
+          {% if form.password1.help_text %}<div class="form-text">{{ form.password1.help_text }}</div>{% endif %}
+          {% for error in form.password1.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.password2.id_for_label }}">Confirmar palavra-passe <span class="text-danger">*</span></label>
+          {{ form.password2 }}
+          {% for error in form.password2.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        {% if form.non_field_errors %}
+          <div class="text-danger small mt-3">{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>
+        {% endif %}
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-dark"><i class="bi bi-person-plus me-1"></i> Criar Utilizador</button>
+          <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
