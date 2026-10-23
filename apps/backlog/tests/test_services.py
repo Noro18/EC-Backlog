@@ -1,11 +1,17 @@
 import pytest
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.backlog.models import EC, Release
-from apps.backlog.services import create_ec, create_release, next_ec_number
+from apps.backlog.services import (
+    can_edit_ec,
+    create_ec,
+    create_release,
+    next_ec_number,
+    update_ec,
+)
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -164,3 +170,155 @@ class TestCreateRelease:
         assert calls["n"] == 2
         assert Release.objects.count() == 1
         assert release.number_sequence == 1
+
+
+class TestUpdateEC:
+    """EC_EDIT.md (issue #67): the rules for editing an EC that is still in flight."""
+
+    def _edit(self, ec, user, **overrides):
+        data = {
+            "reference": ec.reference,
+            "description": ec.description,
+            "release": ec.release,
+            "responsible_cd": ec.responsible_cd,
+        }
+        data.update(overrides)
+        return update_ec(ec, user, **data)
+
+    def test_owner_updates_the_content(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
+
+        updated = self._edit(
+            ec, requester, reference="CR2026999", description="Descrição revista"
+        )
+
+        assert updated.reference == "CR2026999"
+        assert updated.description == "Descrição revista"
+        assert updated.status == EC.Status.IN_VALIDATION
+
+    def test_owner_moves_the_ec_to_another_open_release(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
+        target = ReleaseFactory(year=2027, number_sequence=1, capacity=10)
+
+        updated = self._edit(ec, requester, release=target)
+
+        assert updated.release == target
+
+    def test_rejected_ec_can_still_be_edited(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=requester, status=EC.Status.REJECTED)
+
+        updated = self._edit(ec, requester, description="Correção de texto")
+
+        assert updated.description == "Correção de texto"
+
+    def test_non_owner_requester_is_refused(self):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        intruder = UserFactory(role=User.Role.REQUESTER)
+
+        with pytest.raises(PermissionDenied):
+            self._edit(ec, intruder, reference="CR2026888")
+
+    def test_cd_cannot_edit(self):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        cd = UserFactory(role=User.Role.CD)
+
+        with pytest.raises(PermissionDenied):
+            self._edit(ec, cd, reference="CR2026888")
+
+    def test_des_team_cannot_edit(self):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        des = UserFactory(role=User.Role.DES_TEAM)
+
+        with pytest.raises(PermissionDenied):
+            self._edit(ec, des, reference="CR2026888")
+
+    def test_administrator_may_edit_any_ec(self):
+        admin = UserFactory(role=User.Role.ADMINISTRATOR)
+        ec = ECFactory(status=EC.Status.IN_VALIDATION, requester=None)
+
+        updated = self._edit(ec, admin, reference="CR2026777")
+
+        assert updated.reference == "CR2026777"
+
+    @pytest.mark.parametrize(
+        "status",
+        [
+            EC.Status.APPROVED,
+            EC.Status.SENT_TO_DES,
+            EC.Status.CLOSED,
+            EC.Status.CANCELLED,
+        ],
+    )
+    def test_terminal_statuses_are_refused(self, status):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=requester, status=status)
+
+        with pytest.raises(PermissionDenied):
+            self._edit(ec, requester, reference="CR2026888")
+
+    def test_full_target_release_is_refused(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
+        target = ReleaseFactory(year=2027, number_sequence=2, capacity=1)
+        ECFactory(release=target, year=2027, number_sequence=1)
+
+        with pytest.raises(ValidationError):
+            self._edit(ec, requester, release=target)
+
+        ec.refresh_from_db()
+        assert ec.release != target
+
+    def test_closed_target_release_is_refused(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
+        target = ReleaseFactory(year=2027, number_sequence=3, is_open=False)
+
+        with pytest.raises(ValidationError):
+            self._edit(ec, requester, release=target)
+
+    def test_keeping_the_current_full_release_works(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        release = ReleaseFactory(capacity=1)
+        ec = ECFactory(requester=requester, release=release, status=EC.Status.IN_VALIDATION)
+
+        updated = self._edit(ec, requester, reference="CR2026777")
+
+        assert updated.reference == "CR2026777"
+        assert updated.release == release
+
+    def test_can_edit_ec_predicate(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
+
+        assert can_edit_ec(ec, requester) is True
+        assert can_edit_ec(ec, UserFactory(role=User.Role.CD)) is False
+        ec.status = EC.Status.CLOSED
+        assert can_edit_ec(ec, requester) is False
+
+    def test_owner_changes_the_responsible_cd(self):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        old_cd = UserFactory(role=User.Role.CD)
+        new_cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(
+            requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION
+        )
+
+        updated = self._edit(ec, requester, responsible_cd=new_cd)
+
+        assert updated.responsible_cd == new_cd
+
+    @pytest.mark.parametrize("role", [User.Role.REQUESTER, User.Role.DES_TEAM])
+    def test_the_responsible_must_be_a_cd(self, role):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
+        wrong = UserFactory(role=role)
+
+        with pytest.raises(ValidationError):
+            self._edit(ec, requester, responsible_cd=wrong, reference="CR2026111")
+
+        ec.refresh_from_db()
+        assert ec.reference != "CR2026111"
+        assert ec.responsible_cd_id != wrong.pk

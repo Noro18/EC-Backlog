@@ -9,6 +9,17 @@ from apps.backlog.models import EC, Release
 #: "+ Kria Release Foun" instead of an existing Release (RF02).
 NEW_RELEASE = "__new__"
 
+#: EC_EDIT.md Decision 3 — content may only be corrected while it is still
+#: being shaped, before the CD approves it and before routing closes it.
+EDITABLE_STATUSES = (EC.Status.IN_VALIDATION, EC.Status.REJECTED)
+
+
+def can_edit_ec(ec: "EC", user) -> bool:
+    """EC_EDIT.md Decision 2: the owner, or an Administrator."""
+    if ec.status not in EDITABLE_STATUSES:
+        return False
+    return user.role == User.Role.ADMINISTRATOR or ec.requester_id == user.pk
+
 
 def next_ec_number(year: int) -> int:
     """Return the next EC number for a given year."""
@@ -79,3 +90,38 @@ def record_go_live(release: Release, user, go_live_date=None) -> Release:
     release.production_go_live_date = go_live_date
     release.save(update_fields=["production_go_live_date"])
     return release
+
+
+def update_ec(ec, user, *, reference, description, release, responsible_cd):
+    """EC_EDIT.md: correct the content of an EC that is still in flight.
+
+    Status and identity are never written here; a moved Release must be open
+    with a free seat, and a reassigned CD must really be a CD. Keeping the
+    current Release is always allowed, even if it is now full or closed,
+    because the EC already holds its seat.
+    """
+    with transaction.atomic():
+        ec.refresh_from_db()
+        if not can_edit_ec(ec, user):
+            raise PermissionDenied("This EC cannot be edited.")
+
+        if responsible_cd is not None and responsible_cd.role != User.Role.CD:
+            raise ValidationError("The responsible must be a CD user.")
+
+        fields = ["reference", "description"]
+        ec.reference = reference
+        ec.description = description
+
+        if responsible_cd is not None and responsible_cd.pk != ec.responsible_cd_id:
+            ec.responsible_cd = responsible_cd
+            fields.append("responsible_cd")
+
+        if release is not None and release.pk != ec.release_id:
+            target = Release.objects.get(pk=release.pk)
+            if not target.is_open or target.ec_count >= target.capacity:
+                raise ValidationError("Release EC limit reached or release is closed.")
+            ec.release = target
+            fields.append("release")
+
+        ec.save(update_fields=fields)
+    return ec

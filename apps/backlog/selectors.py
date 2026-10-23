@@ -25,6 +25,24 @@ def open_releases_with_ec_count():
     )
 
 
+def releases_for_edit(current):
+    """EC_EDIT.md Decision 4: open Releases with a free seat, plus the EC's
+    current Release. Keeping the current one must never fail just because it
+    has since filled up or closed — the EC already holds its seat."""
+    open_with_room = open_releases_with_ec_count()
+    allowed = Q(pk__in=open_with_room.values("pk"))
+    if current is not None:
+        allowed |= Q(pk=current.pk)
+    return (
+        Release.objects.filter(allowed)
+        .annotate(ec_total=Count("ecs"))
+        .order_by("-year", "-number_sequence")
+    )
+
+def ec_for_edit(current):
+    pass
+
+
 def dashboard_stats(user) -> dict:
     """Aggregate counters rendered by the dashboard (spec `DASHBOARD.md`)."""
     ec_qs = visible_ecs(user)
@@ -458,7 +476,5 @@ def admin_dashboard(user) -> dict:
             _log_activity(entry) for entry in log_qs.order_by("-timestamp")[:5]
         ],
     }
-
-
 
 

@@ -2,8 +2,8 @@ from django import forms
 
 from apps.accounts.models import User
 
-from .models import EC
-from .selectors import open_releases_with_ec_count
+from .models import EC, Release
+from .selectors import open_releases_with_ec_count, releases_for_edit
 from .services import NEW_RELEASE
 
 
@@ -103,3 +103,65 @@ class ECCreateForm(forms.ModelForm):
         required=True,
         widget=forms.ClearableFileInput(attrs={"class": "form-control", "accept": ".docx,.pdf"}),
     )
+
+
+class EditReleaseChoiceField(forms.ModelChoiceField):
+    """The current Release may be full or closed, so the label must not lie."""
+
+    def label_from_instance(self, obj):
+        count = getattr(obj, "ec_total", obj.ec_count)
+        if not obj.is_open:
+            state = "fechada"
+        elif count >= obj.capacity:
+            state = "lotada"
+        else:
+            state = "aberta"
+        return f"{obj.release_code} ({state} — {count}/{obj.capacity})"
+
+
+class ECEditForm(forms.ModelForm):
+    """EC_EDIT.md Decision 1: the content of an EC that is still in flight.
+
+    Identity (`year`, `number_sequence`), `status`, `creation_date`,
+    `implemented_at` and `requester` are not in `fields`, so ModelForm
+    ignores them even if a crafted POST sends them.
+    """
+
+    class Meta:
+        model = EC
+        fields = ["reference", "description", "release", "responsible_cd"]
+        widgets = {
+            "reference": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "ex.: CR2026042",
+                    "autocomplete": "off",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Descreva a alteração técnica com clareza...",
+                }
+            ),
+        }
+
+    release = EditReleaseChoiceField(
+        queryset=Release.objects.none(),
+        required=True,
+        empty_label=None,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    responsible_cd = CDChoiceField(
+        queryset=User.objects.filter(role=User.Role.CD),
+        required=True,
+        empty_label=None,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Fresh queryset per form; the EC's own Release is always included.
+        self.fields["release"].queryset = releases_for_edit(self.instance.release)

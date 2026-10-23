@@ -28,6 +28,11 @@
             <i class="bi bi-send"></i> Send to DES
         </button>
         {% endif %}
+        {% if can_edit %}
+        <a href="{% url 'backlog:ec_edit' ec.pk %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil"></i> Editar
+        </a>
+        {% endif %}
         <a href="{% url 'backlog:ec_list' %}" class="btn btn-outline-secondary btn-sm"
             onclick="if (history.length > 1) { history.back(); return false; }">
                 <i class="bi bi-arrow-left"></i> Voltar

@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from apps.accounts.models import User
 from apps.backlog.models import EC
-from apps.backlog.tests.factories import ReleaseFactory, UserFactory
+from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 from apps.backlog.tests.test_views import docx_file
 
 pytestmark = pytest.mark.django_db
@@ -40,4 +40,29 @@ class TestAuditlogActor:
         )
 
         assert entry.action == LogEntry.Action.CREATE
+        assert entry.actor == requester
+
+    def test_editing_an_ec_records_the_actor(self, client):
+        requester = UserFactory(role=User.Role.REQUESTER)
+        cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
+        client.force_login(requester)
+
+        response = client.post(
+            reverse("backlog:ec_edit", args=[ec.pk]),
+            data={
+                "reference": "CR2026123",
+                "description": "Descrição corrigida",
+                "release": ec.release.pk,
+                "responsible_cd": cd.pk,
+            },
+        )
+        assert response.status_code == 302  # the edit really happened
+
+        entry = LogEntry.objects.get(
+            content_type=ContentType.objects.get_for_model(EC),
+            object_pk=str(ec.pk),
+            action=LogEntry.Action.UPDATE,
+        )
+
         assert entry.actor == requester

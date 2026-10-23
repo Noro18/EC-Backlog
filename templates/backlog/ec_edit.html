@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Editar EC-{{ ec.ec_code }} — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <div>
+    <h4 class="mb-1"><i class="bi bi-pencil-square me-1"></i> Editar EC-{{ ec.ec_code }}</h4>
+    <p class="text-muted mb-0">
+      Corrija a referência, a descrição ou a Release enquanto a EC ainda está em curso.
+    </p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm p-4">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.reference.id_for_label }}">Referência (CR / RT / COR) <span class="text-danger">*</span></label>
+          {{ form.reference }}
+          {% for error in form.reference.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.description.id_for_label }}">Descrição da Alteração <span class="text-danger">*</span></label>
+          {{ form.description }}
+          {% for error in form.description.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.release.id_for_label }}">Selecionar Release <span class="text-danger">*</span></label>
+          {{ form.release }}
+          {% for error in form.release.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.release.id_for_label }}">Selecionar CD <span class="text-danger">*</span></label>
+          {{ form.responsible_cd }}
+          {% for error in form.responsible_cd.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="text-danger small mt-3">{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>
+        {% endif %}
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-dark"><i class="bi bi-check2 me-1"></i> Guardar alterações</button>
+          <a href="{% url 'backlog:ec_detail' ec.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm p-4 mt-3 bg-body-secondary">
+      <h6 class="fw-bold"><i class="bi bi-info-circle me-1"></i> Nota</h6>
+      <small class="text-body-secondary">
+        O número da EC, o estado e a data de criação não são editáveis.
+        Estas alterações ficam registadas no histórico.
+      </small>
+    </div>
+  </div>
+</div>
+{% endblock %}
