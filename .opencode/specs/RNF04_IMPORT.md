@@ -55,10 +55,12 @@ already assigned, without touching the workflow that governs live ECs.
 5. **`is_imported = True` on every row; `id` is never read from the file.** Identity is
    `(year, number_sequence)`, which is also the duplicate key checked twice: inside the file and
    against rows already in the database.
-6. **Unmapped `status` = refused row, never guessed.** `Closed` maps to `closed`
-   (case-insensitive after `strip()`); `is_open` currently has **no mapping** and is therefore
-   refused. Writing status directly is the one documented exception to "status only through
-   workflow" (`database-scheme.md:19`), so the mapping must be explicit and visible.
+6. **Unmapped `status` = refused row, never guessed.** Mapping (case-insensitive after
+   `strip()`): `closed` → `closed`, and — **decided by the user on 2026-10-23** —
+   `is_open` → `in_validation`. History is provisional: an Admin corrects individual statuses
+   later through the normal flow, and auditlog records each correction. Writing status directly is
+   the one documented exception to "status only through workflow" (`database-scheme.md:19`), so the
+   mapping must be explicit and visible.
 7. **CSV by default.** The stdlib `csv` module needs no new dependency. XLSX support is only added
    (`uv add "django-import-export[xlsx]"`) if the notebook cannot emit CSV — an open question.
 8. **Strict column contract.** Extra or misspelled columns are an error, not silently ignored,
@@ -146,7 +148,8 @@ year,number_sequence,reference,description,status
 | `rejected` | `rejected` |
 | `sent_to_des` / `sent to des` | `sent_to_des` |
 | `cancelled` / `canceled` | `cancelled` |
-| **anything else** (today: `is_open`) | **refused** — reported, never guessed |
+| `is_open` | `in_validation` (Decision 6, decided 2026-10-23) |
+| **anything else** | **refused** — reported, never guessed |
 
 **CLI behaviour:**
 
@@ -163,10 +166,8 @@ year,number_sequence,reference,description,status
 ```
 File: limpo.csv (48 rows)
 Years: 2026..2026
-Status: closed=6, unmapped=42
-Refused (43):
-  line  3: status "is_open" has no mapping
-  ...
+Status: closed=6, in_validation=42
+Refused (1):
   line 48: reference is blank
 Dry-run only: nothing was written. Re-run with --commit to load.
 ```
@@ -176,7 +177,7 @@ not in code:
 
 | Defect | Rows | Effect here |
 |---|---|---|
-| `status = "is_open"` — a `Release` flag, not an `EC.Status` | 42 | refused until the mapping is decided |
+| `status = "is_open"` — a `Release` flag, not an `EC.Status` | 42 | mapped to `in_validation` (Decision 6) |
 | `Referencia` is null | index 47 | refused (`EC.reference` is required) |
 | column names `Referencia` / `Deskrisaun` | all | must be renamed to `reference` / `description` |
 | extra columns `year_release`, `number_sequence_release`, `go_live` | all | must be dropped for v1 (strict contract) |
@@ -266,7 +267,7 @@ TDD: failing test first. New module `apps/backlog/tests/test_import_history.py`,
 | 4 | `test_a_blank_number_sequence_is_refused` | edge case 1 |
 | 5 | `test_a_duplicate_inside_the_file_is_refused` | edge case 2 |
 | 6 | `test_a_row_colliding_with_an_existing_ec_is_refused` | edge case 3 |
-| 7 | `test_an_unmapped_status_is_refused` (`is_open`) | Decision 6 |
+| 7 | `test_an_unmapped_status_is_refused` (e.g. a made-up `"wip"`) | Decision 6 |
 | 8 | `test_commit_is_all_or_nothing_when_one_row_is_bad` | Decision 4 |
 | 9 | `test_an_unknown_column_is_reported` | Decision 8 |
 | 10 | `test_after_the_import_the_next_ec_number_is_free` (`next_ec_number(2026)`) | no collision |
@@ -284,6 +285,31 @@ Expected suite: **252 = 242 + 10**.
   calling a `workflow` service, touching templates/views/urls, committing the notebook or the
   source Excel, `git add .` over the untracked `apps/workflow/management/*` files.
 
+## Operational Rules (data safety)
+
+Rules for anyone (human or agent) running anything against the **real** dev database. Learned
+2026-10-23: the database was left with 13 half-imported ECs — 5 stamped `is_imported=True`,
+8 unstamped, one number missing (3), from a dead mid-file run. Verify before you trust.
+
+1. **pytest never touches the real DB.** Django builds a throwaway `test_...` database per run and
+   discards it. The test suite can run freely without seeing the 48 imported ECs. Also recorded in
+   `docs/ARCHITECTURE.md` § 9.
+2. **Manual processes are the only danger:** `manage.py shell` and `import_history` hit the real
+   database. Every manual write is followed by a read-back check (e.g. `EC.objects.count()`).
+3. **The import is idempotent:** `import_id_fields = (year, number_sequence)` + `skip_unchanged`.
+   Re-running `--commit` re-states the same rows; it duplicates nothing. A *dirty* database, not a
+   repeated commit, is what corrupts the result.
+4. **Clean-slate workflow** — repeat whenever the dev DB looks dirty:
+   a. `DocumentVersion.objects.count()` first; if it is not 0, STOP and ask — there may be real
+      attachments hanging off the rows to be deleted.
+   b. Wipe the leftovers (`EC.objects.all().delete()` is fine while pre-production).
+   c. Dry-run `import_history`, read the report.
+   d. `--commit`, then verify `EC.objects.count()` and `next_ec_number(2026)`.
+5. **`status` is a workflow-only field** — the import is the single documented exception
+   (Decision 6). No script ever flips `EC.status` by direct assignment outside these two places.
+6. **The production import is a one-pass event** (`Boundaries` already says "ask first"): the
+   clean-slate wipe above is a dev-DB luxury and must never run against production.
+
 ## Success Criteria
 
 - [ ] `import_history <file>` (no flag) prints the report and leaves both tables untouched.
@@ -291,10 +317,11 @@ Expected suite: **252 = 242 + 10**.
       `year`/`number_sequence`, and a mapped status.
 - [ ] Accented Portuguese text is stored exactly as in the file.
 - [ ] Any refused row aborts `--commit` with a non-zero exit and **zero** rows written.
-- [ ] `is_open` is refused, not translated, until a mapping decision is recorded here.
+- [ ] `is_open` is mapped to `in_validation` (Decision 6); any other unmapped status is refused,
+      not guessed.
 - [ ] `next_ec_number(2026)` after the import equals `max(imported) + 1`.
-- [ ] The 48-row 2026 file is read end to end: dry-run reports `closed=6` and the 42 unmapped rows
-      with their line numbers.
+- [ ] The 48-row 2026 file is read end to end: dry-run reports `closed=6`, `in_validation=42`,
+      and the 1 refused row with its line number.
 - [ ] 252 tests green, `ruff check .` clean, no migration generated.
 
 ## Deferred
@@ -310,13 +337,10 @@ Expected suite: **252 = 242 + 10**.
 
 ## Open Questions
 
-- **BLOCKING — what `is_open` means.** Value counts for 2026 are `Closed` = 6 and `is_open` = 42.
-  `is_open` is a `Release` flag, not one of the six `EC.Status` values. Decision on 2026-10-23:
-  **check the source Excel first** for a real EC status column (`Concluída`, `Em execução`, …).
-  Until that is answered, `--commit` is impossible by design — it would abort on the 42 refusals.
-  Fallbacks if the source has no status: `sent_to_des` (every row already carries a Release),
-  `in_validation`, or treat all as `closed` and use `go_live` as the completion marker.
-  Fallback choice is not made here.
+- **`is_open` — RESOLVED 2026-10-23.** The 42 rows map to `in_validation` (Decision 6). History is
+  provisional: an Admin corrects individual statuses later through the normal flow, and every
+  correction is auditlogged (RNF02). The fallbacks below were for 2019–2025 rows, which do not
+  exist — moot. `--commit` is no longer blocked by the status question (only by file defects).
 - **`number_sequence` is no longer open** — the cleaned file fills it 1–48, so Decision 1 needs no
   derivation rule. `RT202629411` and friends stay free text in `reference`.
 - **2019–2025 rows do not exist** — confirmed 2026-10-23, recorded in *Objective*. Nothing to do.

@@ -147,6 +147,7 @@ An arrow means "may import from". Each app may import only from apps to its righ
 - Tests live in `apps/<app>/tests/` (`test_models.py`, `test_services.py`, `test_views.py`) with test data in `factories.py` using factory-boy.
 - Required tests: Release capacity, version increment on resubmission, status transitions and who may perform them, notification sending and failure handling, CSV/Excel import dry-run. Capacity is tested **sequentially** (the 11th EC is refused); a true concurrent-write test cannot be written on SQLite, because SQLite's whole-file write lock makes it pass regardless of the code under test. See section 2.
 - Run `uv run pytest` (or `uv run python manage.py test <app>`) and `uv run ruff check .` before declaring work finished.
+- Tests run against a throwaway `test_...` database that Django creates and destroys per run; the real `db.sqlite3` is never touched by pytest. Anything run **manually** (`manage.py shell`, one-off management commands) does hit the real database — always follow a manual write with a read-back check (e.g. `Model.objects.count()`), and before deleting rows check dependent tables first (e.g. `DocumentVersion.objects.count()`).
 
 ## 10. Workflow with the user
 
