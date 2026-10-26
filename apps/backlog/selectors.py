@@ -479,34 +479,42 @@ def _log_activity(entry: LogEntry) -> dict:
     model = entry.content_type.model if entry.content_type else ""
     changes = entry.changes if isinstance(entry.changes, dict) else {}
     code = _EC_CODE_RE.search(entry.object_repr)
-    target = f"EC {code.group()}" if code else entry.object_repr
+    target = f"EC-{code.group()}" if code else entry.object_repr
 
     if model == "documentversion" and entry.action == LogEntry.Action.CREATE:
         version = _EC_VERSION_RE.search(entry.object_repr)
         suffix = f" a {version.group()}" if version else ""
         description = f"{actor_name} enviou{suffix} do {target}"
+
     elif model == "review":
         _old, decision = _changed(changes, "decision")
         _old_comment, comment = _changed(changes, "comment")
         if decision == "approved":
+
             description = f"{actor_name} aprovou o {target}"
         elif decision == "rejected":
+
             suffix = " com comentário" if comment else ""
             description = f"{actor_name} rejeitou o {target}{suffix}"
+            
         else:
             description = f"{actor_name} avaliou o {target}"
     else:
         verb = _LOG_VERBS.get(entry.action, "atualizou")
-        noun = _LOG_NOUN_PT.get(model)
-        description = (
-            f"{actor_name} {verb} {noun} {entry.object_repr}".strip()
-            if noun
-            else f"{actor_name} {verb} {entry.object_repr}"
-        )
+
+        if model == "ec":
+            description = f"{actor_name} {verb} o {target}"
+        else:
+            noun = _LOG_NOUN_PT.get(model)
+            description = (
+                f"{actor_name} {verb} {noun} {entry.object_repr}".strip()
+                if noun
+                else f"{actor_name} {verb} {entry.object_repr}"
+            )
+
         _old, new_status = _changed(changes, "status")
         if model == "ec" and new_status:
             description += f" → {EC_STATUS_PT.get(new_status, new_status)}"
-
     return {
         "time": timezone.localtime(entry.timestamp).strftime("%H:%M"),
         "description": description,
@@ -571,11 +579,23 @@ def full_audit_log_entries():
             new_pt = EC_STATUS_PT.get(new_status, new_status)
             details_parts.append(f"{old_pt} → {new_pt}")
 
+        object_label = entry.object_repr
+        model = entry.content_type.model if entry.content_type else ""
+
+        if model in {"ec", "documentversion", "review"}:
+            match = _EC_CODE_RE.search(object_label)
+            if match and not object_label[:match.start()].endswith("EC-"):
+                code = match.group()
+                object_label = (
+                    f"{object_label[:match.start()]}EC-{code}"
+                    f"{object_label[match.end():]}"
+                )
+
         results.append({
             "timestamp": timezone.localtime(entry.timestamp).strftime("%d/%m/%Y %H:%M"),
             "actor": user_str,
             "action": entry.get_action_display(),
-            "object": entry.object_repr,
+            "object": object_label,
             "details": " | ".join(details_parts),
         })
     return results
