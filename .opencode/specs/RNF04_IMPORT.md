@@ -334,14 +334,20 @@ Rules for anyone (human or agent) running anything against the **real** dev data
 
 ## Deferred
 
-- **Releases and go-live dates** — the second pass: create `Release` rows from
-  `year_release` + `number_sequence_release` (`TT_ON_YYYY-NNN`), set
-  `production_go_live_date`, then attach imported ECs. Needs its own decisions (capacity, `is_open`
-  for history).
-- **Documents** for historical ECs (attach first `DocumentVersion` when a file exists).
-- **`requester` / `responsible_cd`** matching from name columns to real accounts.
-- **XLSX input**, if CSV is not workable.
-- **A UI** for the import (upload page) — §7.7 keeps it CLI-only.
+The following features are planned for future implementation after the core RNF04 import (Babak 1) is complete and merged:
+
+*   ** 2: Release Import (SPEC DRAFTED)** — Detailed specification drafted below. This requires user decisions and `SPEC_APPROVED` before implementation.
+    *   **Objective:** Load historical Release data from `releases_clean.csv` and `ec_release_map.csv`. Link ECs to Releases. Handle historical data ambiguities.
+    *   **Source Files:** `releases_clean.csv` (unique Releases + `go_live`), `ec_release_map.csv` (EC-Release link).
+    *   **Decisions Required:**
+        1.  **Release Code Format:** Use `TT_ON_YYYY-NNN` from CSV for `Release.release_code`.
+        2.  **Production Go-Live Date:** Use the latest valid date per Release. Null if all invalid.
+        3.  **Release Capacity:** Ignore capacity rules for historical Releases.
+        4.  **EC Attachment:** ECs without Release link in map → `Release` field NULL.
+        5.  **Release Status (`is_open`):** Map source `status='closed'` → `Release.is_open=False`, source `status='is_open'` → `Release.is_open=True`.
+    *   **Workflow:** New command `import_releases.py`. Read CSVs -> Validate rules -> Report -> `--commit` mode writes Release data and links ECs.
+*   **Documents** for historical ECs (attach first `DocumentVersion` when a file exists).
+*   **`requester` / `responsible_cd`** matching from name columns to real accounts.
 
 ## Open Questions
 
