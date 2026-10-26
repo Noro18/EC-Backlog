@@ -90,7 +90,7 @@ class TestAdminDashboard:
         assert "Pesquisar nome..." not in html
         # The feed is rendered by django-tables2 (`ActivityTable`), not a <ul>.
         assert "Hora" in html
-        assert f"criou o EC {ec}" in html
+        assert f"criou o EC-{ec}" in html
 
     def test_non_admin_does_not_see_the_admin_panel(self, client):
         client.force_login(UserFactory(role=User.Role.REQUESTER))
@@ -139,7 +139,7 @@ class TestAdminDashboard:
         assert data["actions_today"] >= 1
         assert data["recent_logs"]
         entry = data["recent_logs"][0]
-        assert f"criou o EC {ec}" in entry["description"]
+        assert f"criou o EC-{ec}" in entry["description"]
         assert len(entry["time"]) == 5  # "HH:MM"
 
     def test_an_upload_reads_as_one_portuguese_sentence(self):
