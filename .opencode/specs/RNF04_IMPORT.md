@@ -85,7 +85,7 @@ uv run python manage.py import_history /path/limpo.csv --commit
 
 # checks
 uv run pytest apps/backlog/tests/test_import_history.py -q
-uv run pytest -q                       # 242 -> 252
+uv run pytest -q                       # 242 -> 255
 uv run ruff check .
 ```
 
@@ -95,7 +95,7 @@ uv run ruff check .
 
 ```
 apps/backlog/
-├── resources.py                              # NEW  ECResource — column <-> field mapping only
+├── resources.py                              # NEW  ECResource — column <-> field mapping only (DEFERRED, see Code Style)
 ├── management/
 │   ├── __init__.py                           # NEW  (empty)
 │   └── commands/
@@ -168,7 +168,7 @@ File: limpo.csv (48 rows)
 Years: 2026..2026
 Status: closed=6, in_validation=42
 Refused (1):
-  line 48: reference is blank
+  line 49: reference is blank
 Dry-run only: nothing was written. Re-run with --commit to load.
 ```
 
@@ -215,6 +215,12 @@ See *System Architecture*. Four new files (two of them empty package markers), o
 no template, no view, no URL, no migration.
 
 ## Code Style
+
+> **DEFERRED — the `ECResource` refactor (decided 2026-10-26, shipped v1 keeps mapping in the
+> command).** The shipped implementation keeps `STATUS_MAPPING` + the write loop directly in the
+> command, so `resources.py` stays empty and uncommitted. The call is not final: the input is
+> already a list of dicts (no tablib dataset needed for a one-off CLI), but spec §7.7 named
+> `resources.py`. Revisit with a dedicated spec amendment or PR before the next import feature.
 
 ```python
 # resources.py — mapping only; no validation, no reporting
@@ -272,7 +278,9 @@ TDD: failing test first. New module `apps/backlog/tests/test_import_history.py`,
 | 9 | `test_an_unknown_column_is_reported` | Decision 8 |
 | 10 | `test_after_the_import_the_next_ec_number_is_free` (`next_ec_number(2026)`) | no collision |
 
-Expected suite: **252 = 242 + 10**.
+Expected suite: **255 = 242 + 13** (the 10 listed tests plus two post-approval additions —
+`test_a_blank_reference_is_refused`, `test_the_report_shows_years_and_status_counts` — and a
+separate first-commit test paired from the table).
 
 ## Boundaries
 
@@ -322,7 +330,7 @@ Rules for anyone (human or agent) running anything against the **real** dev data
 - [ ] `next_ec_number(2026)` after the import equals `max(imported) + 1`.
 - [ ] The 48-row 2026 file is read end to end: dry-run reports `closed=6`, `in_validation=42`,
       and the 1 refused row with its line number.
-- [ ] 252 tests green, `ruff check .` clean, no migration generated.
+- [ ] 255 tests green, `ruff check .` clean, no migration generated.
 
 ## Deferred
 
