@@ -278,7 +278,8 @@ TDD: failing test first. New module `apps/backlog/tests/test_import_history.py`,
 | 9 | `test_an_unknown_column_is_reported` | Decision 8 |
 | 10 | `test_after_the_import_the_next_ec_number_is_free` (`next_ec_number(2026)`) | no collision |
 
-Expected suite: **255 = 242 + 13** (the 10 listed tests plus two post-approval additions —
+Expected suite: **265 = 242 + 13 + 10** (Babak 1: 13 tests; Babak 2: 10 tests in
+`apps/backlog/tests/test_import_releases.py`).
 `test_a_blank_reference_is_refused`, `test_the_report_shows_years_and_status_counts` — and a
 separate first-commit test paired from the table).
 
@@ -330,15 +331,19 @@ Rules for anyone (human or agent) running anything against the **real** dev data
 - [ ] `next_ec_number(2026)` after the import equals `max(imported) + 1`.
 - [ ] The 48-row 2026 file is read end to end: dry-run reports `closed=6`, `in_validation=42`,
       and the 1 refused row with its line number.
-- [ ] 255 tests green, `ruff check .` clean, no migration generated.
+- [x] 265 tests green (242 + 13 EC + 10 Release), `ruff check .` clean, no migration generated.
 
 ## Deferred
 
 The following features are planned for future implementation after the core RNF04 import (Babak 1) is complete and merged:
 
-*   ** 2: Release Import (SPEC DRAFTED)** — Detailed specification drafted below. This requires user decisions and `SPEC_APPROVED` before implementation.
+*   **Babak 2: Release Import (SPEC_SENT 2026-10-26 → SPEC_APPROVED → IMPLEMENTED on `feat/historical-import`)**
+    *   Command: `apps/backlog/management/commands/import_releases.py` (+ 10 tests in
+        `apps/backlog/tests/test_import_releases.py`).
     *   **Objective:** Load historical Release data from `releases_clean.csv` and `ec_release_map.csv`. Link ECs to Releases. Handle historical data ambiguities.
     *   **Source Files:** `releases_clean.csv` (unique Releases + `go_live`), `ec_release_map.csv` (EC-Release link).
+    *   Verified against the real archives: **27 rows → 25 distinct releases** (double-row
+        `2026-004` collapses to the latest `go_live`). ECs attached: 46; without Release: 2.
     *   **Decisions Required:**
         1.  **Release Code Format:** Use `TT_ON_YYYY-NNN` from CSV for `Release.release_code`.
         2.  **Production Go-Live Date:** Use the latest valid date per Release. Null if all invalid.
