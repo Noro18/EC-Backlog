@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% load render_table from django_tables2 %}
+
+{% block title %}Solicitações Pendentes — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-4">
+    <div>
+        <h3 class="mb-1">Solicitações Pendentes</h3>
+        <p class="text-muted mb-0">
+            ECs que aguardam validação do CD responsável.
+        </p>
+    </div>
+    <a href="{% url 'backlog:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar ao Painel
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% render_table table %}
+    </div>
+</div>
+{% endblock %}

@@ -25,6 +25,7 @@ from .selectors import (
     dashboard_stats,
     des_team_dashboard,
     full_audit_log_entries,
+    pending_ecs,
     release_with_ec_count,
     requester_dashboard,
     search_ecs,
@@ -40,6 +41,7 @@ from .tables import (
     ECRequesterTable,
     ECTable,
     FullAuditLogTable,
+    PendingECTable,
     ReleaseTable,
 )
 
@@ -254,4 +256,19 @@ class AuditLogListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView)
     def get_queryset(self):
         return full_audit_log_entries()
 
-    
+
+class PendingECListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView):
+    table_class = PendingECTable
+    template_name = "backlog/pending_ecs.html"
+    paginate_by = 25
+
+    def test_func(self):
+        return self.request.user.role in (
+            User.Role.CD,
+            User.Role.ADMINISTRATOR,
+        )
+
+    def get_queryset(self):
+        return pending_ecs(self.request.user)
+
+
