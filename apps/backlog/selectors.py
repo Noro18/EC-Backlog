@@ -362,6 +362,67 @@ def cd_dashboard(user) -> dict:
         "ec_by_month": ec_by_month,
     }
 
+def pending_ecs(user):
+    """Return pending validation rows visible to this CD or Administrator."""
+    if user.role == User.Role.CD:
+        ec_qs = EC.objects.filter(
+            status=EC.Status.IN_VALIDATION,
+            responsible_cd=user,
+        )
+    elif user.role == User.Role.ADMINISTRATOR:
+        ec_qs = EC.objects.filter(
+            status=EC.Status.IN_VALIDATION,
+            responsible_cd__isnull=False,
+        )
+    else:
+        return []
+
+    ec_qs = ec_qs.select_related("requester", "responsible_cd").prefetch_related(
+        "versions__review"
+    )
+
+    rows = []
+    for ec in ec_qs:
+        versions = list(ec.versions.all())
+        if not versions:
+            continue
+
+        latest = versions[0]
+        if getattr(latest, "review", None) is not None:
+            continue
+
+        requester = ec.requester
+
+        rows.append(
+            {
+                "id": ec.id,
+                "ec_code": ec.ec_code,
+                "reference": ec.reference,
+                "requester": (
+                    requester.full_name or requester.username
+                    if requester
+                    else "—"
+                ),
+                "responsible_cd": (
+                    ec.responsible_cd.full_name or ec.responsible_cd.username
+                ),
+                "version": latest.version_number,
+                "uploaded_at": latest.uploaded_at,
+                "_sort_key": (
+                    latest.uploaded_at,
+                    ec.year,
+                    ec.number_sequence,
+                ),
+            }
+        )
+
+    rows.sort(key=lambda row: row["_sort_key"], reverse=True)
+    for row in rows:
+        del row["_sort_key"]
+
+    return rows
+
+
 
 def des_team_dashboard(user) -> dict:
     """DES Team-centric dashboard stats and queues for ECs sent to DES."""

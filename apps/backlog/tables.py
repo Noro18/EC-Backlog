@@ -284,3 +284,59 @@ class FullAuditLogTable(tables.Table):
         attrs = {"class": "table table-hover align-middle mb-0 small"}
         empty_text = "Sem registos de auditoria."
 
+
+class PendingECTable(tables.Table):
+    ec_code = tables.TemplateColumn(
+        verbose_name="EC / Referência",
+        orderable=False,
+        template_code="""
+            <div>
+                <a href="{% url 'backlog:ec_detail' record.id %}"
+                   class="fw-semibold text-decoration-none">
+                    {{ record.ec_code }}
+                </a>
+                <div class="text-muted small">{{ record.reference }}</div>
+            </div>
+        """,
+    )
+    requester = tables.Column(
+        verbose_name="Solicitante",
+        orderable=False,
+    )
+    responsible_cd = tables.Column(
+        verbose_name="CD responsável",
+        orderable=False,
+    )
+    version = tables.Column(
+        verbose_name="Versão",
+        orderable=False,
+    )
+    uploaded_at = tables.DateTimeColumn(
+        verbose_name="Enviado em",
+        format="d/m/Y H:i",
+        orderable=False,
+    )
+    action = tables.TemplateColumn(
+        verbose_name="Ação",
+        orderable=False,
+        template_code="""
+            <a href="{% url 'backlog:ec_detail' record.id %}"
+               class="btn btn-sm btn-outline-primary">
+                Ver detalhe
+            </a>
+        """,
+        attrs={"th": {"class": "text-end"}, "td": {"class": "text-end"}},
+    )
+
+    class Meta:
+        template_name = "django_tables2/bootstrap5.html"
+        fields = (
+            "ec_code",
+            "requester",
+            "responsible_cd",
+            "version",
+            "uploaded_at",
+            "action",
+        )
+        attrs = {"class": "table table-hover align-middle mb-0"}
+        empty_text = "Nenhum EC pendente de revisão."

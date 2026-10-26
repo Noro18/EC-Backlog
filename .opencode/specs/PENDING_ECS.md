@@ -1,5 +1,7 @@
 # Spec — Pending EC Validation Queue (`Solicitações Pendentes`)
 
+**Status:** SPEC_APPROVED; implementation complete on `feat/pending-ecs` (8 feature tests).
+
 ## Objective
 
 Provide a dedicated page listing ECs that are currently waiting for CD validation, replacing
@@ -115,11 +117,12 @@ additional filters in this first version.
 4. Requester and DES Team receive 403; anonymous users are redirected to login.
 5. Each listed EC links to its existing detail page; no new approval/rejection behavior is added.
 6. Pagination and the empty state work.
-7. Tests pass, `ruff check .` is clean, and no migration is generated.
+7. **Done:** 8 feature tests and the full 318-test suite pass; `ruff check .` is clean; no migration
+   was generated.
 
-## Decisions to Confirm Before `SPEC_APPROVED`
+## Approved Decisions
 
-1. Confirm the proposed roles: CD sees assigned ECs; Administrator sees all pending ECs.
-2. Confirm the pending definition requires an assigned CD and a latest document version without a
-   Review. This follows the existing validation flow, but the SRD does not spell out a queue query.
-3. Confirm the proposed columns and page size (25 rows).
+1. CD sees pending ECs assigned to that CD; Administrator sees all pending ECs.
+2. Pending requires `IN_VALIDATION`, an assigned CD, and a latest document version without a
+   `Review`.
+3. The page uses the listed columns and 25 rows per page.

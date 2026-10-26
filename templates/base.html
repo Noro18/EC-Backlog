@@ -47,7 +47,7 @@
             {% if user.role == 'cd' or user.role == 'administrator' %}
             <p class="nav-section">Aprovações</p>
             <ul class="nav flex-column mb-4">
-                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-clock-history"></i> Solicitações Pendentes</a></li>
+                <li class="nav-item"><a href="{% url 'backlog:pending_ecs' %}" class="nav-link"><i class="bi bi-clock-history"></i> Solicitações Pendentes</a></li>
                 {% if user.role == 'cd' %}
                 <li class="nav-item"><a href="{% url "backlog:ec_list" %}" class="nav-link"><i class="bi bi-folder2-open"></i> Lista EC</a></li>
                 <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-check-circle"></i> Histórico de Aprovações</a></li>
