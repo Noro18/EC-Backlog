@@ -254,18 +254,29 @@ class ActivityTable(tables.Table):
     not `LogEntry` rows, so both columns are plain and not orderable.
     """
 
-    time = tables.Column(
-        verbose_name="Hora",
-        orderable=False,
-        attrs={"td": {"class": "text-muted small text-nowrap", "style": "width: 5.5rem;"}},
-    )
-    description = tables.Column(
-        verbose_name="Atividade",
-        orderable=False,
-        attrs={"td": {"class": "small"}},
-    )
+    timestamp = tables.Column(verbose_name="Hora", orderable=False, attrs={"td": {"class": "text-nowrout text-muted small"}})
+    actor = tables.Column(verbose_name="Utilizador (Role)", orderable=False)
+    action = tables.Column(verbose_name="Ação", orderable=False)
+    object = tables.Column(verbose_name="Objeto", orderable=False)
+    details = tables.Column(verbose_name="Detalhes / Status", orderable=False)
 
+    
     class Meta:
         template_name = "django_tables2/bootstrap5.html"
         attrs = {"class": "table table-hover align-middle mb-0"}
         empty_text = "Sem atividade registada."
+
+class FullAuditLogTable(tables.Table):
+    """Professional enterprise audit log table."""
+
+    timestamp = tables.Column(verbose_name="Hora", orderable=False, attrs={"td": {"class": "text-nowrout text-muted small"}})
+    actor = tables.Column(verbose_name="Utilizador (Role)", orderable=False)
+    action = tables.Column(verbose_name="Ação", orderable=False)
+    object = tables.Column(verbose_name="Objeto", orderable=False)
+    details = tables.Column(verbose_name="Detalhes / Status", orderable=False)
+
+    class Meta:
+        template_name = "django_tables2/bootstrap5.html"
+        attrs = {"class": "table table-hover align-middle mb-0 small"}
+        empty_text = "Sem registos de auditoria."
+
