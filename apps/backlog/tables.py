@@ -292,9 +292,7 @@ class PendingECTable(tables.Table):
         template_code="""
             <div>
                 <a href="{% url 'backlog:ec_detail' record.id %}"
-                   class="fw-semibold text-decoration-none">
-                    {{ record.ec_code }}
-                </a>
+                   class="fw-semibold text-decoration-none">EC-{{ record.ec_code }}</a>
                 <div class="text-muted small">{{ record.reference }}</div>
             </div>
         """,
