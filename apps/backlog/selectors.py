@@ -412,33 +412,43 @@ def _changed(changes: dict, field: str):
 
 
 def _log_activity(entry: LogEntry) -> dict:
-    """Turn one `LogEntry` row into a dict for the audit log table."""
+    """Turn one `LogEntry` row into `{time, description}` for the feed."""
     actor = entry.actor
     actor_name = (actor.full_name or actor.username) if actor else "Sistema"
-    actor_role = actor.get_role_display() if actor and hasattr(actor, "get_role_display") else ""
-    user_str = f"{actor_name} ({actor_role})" if actor_role else actor_name
-
+    model = entry.content_type.model if entry.content_type else ""
     changes = entry.changes if isinstance(entry.changes, dict) else {}
-    old_status, new_status = _changed(changes, "status")
-    _, comment = _changed(changes, "comment")
-    _, decision = _changed(changes, "decision")
+    code = _EC_CODE_RE.search(entry.object_repr)
+    target = f"EC {code.group()}" if code else entry.object_repr
 
-    details_parts = []
-    if decision:
-        details_parts.append(f"Decisão: {decision}")
-    if comment:
-        details_parts.append(f"Comentário: {comment}")
-    if old_status and new_status:
-        old_pt = EC_STATUS_PT.get(old_status, old_status)
-        new_pt = EC_STATUS_PT.get(new_status, new_status)
-        details_parts.append(f"{old_pt} → {new_pt}")
+    if model == "documentversion" and entry.action == LogEntry.Action.CREATE:
+        version = _EC_VERSION_RE.search(entry.object_repr)
+        suffix = f" a {version.group()}" if version else ""
+        description = f"{actor_name} enviou{suffix} do {target}"
+    elif model == "review":
+        _old, decision = _changed(changes, "decision")
+        _old_comment, comment = _changed(changes, "comment")
+        if decision == "approved":
+            description = f"{actor_name} aprovou o {target}"
+        elif decision == "rejected":
+            suffix = " com comentário" if comment else ""
+            description = f"{actor_name} rejeitou o {target}{suffix}"
+        else:
+            description = f"{actor_name} avaliou o {target}"
+    else:
+        verb = _LOG_VERBS.get(entry.action, "atualizou")
+        noun = _LOG_NOUN_PT.get(model)
+        description = (
+            f"{actor_name} {verb} {noun} {entry.object_repr}".strip()
+            if noun
+            else f"{actor_name} {verb} {entry.object_repr}"
+        )
+        _old, new_status = _changed(changes, "status")
+        if model == "ec" and new_status:
+            description += f" → {EC_STATUS_PT.get(new_status, new_status)}"
 
     return {
-        "timestamp": timezone.localtime(entry.timestamp).strftime("%d/%m/%Y %H:%M"),
-        "actor": user_str,
-        "action": entry.get_action_display(),
-        "object": entry.object_repr,
-        "details": " | ".join(details_parts),
+        "time": timezone.localtime(entry.timestamp).strftime("%H:%M"),
+        "description": description,
     }
 
 
@@ -450,7 +460,10 @@ def admin_dashboard(user) -> dict:
     """
     today = timezone.localdate()
     ec_qs = EC.objects.all()
-    log_qs = LogEntry.objects.select_related("actor", "content_type")
+    log_qs = (
+        LogEntry.objects.select_related("actor", "content_type")
+        .filter(content_type__model__in=["ec", "release", "review", "documentversion"])
+    )
 
     return {
         # KPI cards

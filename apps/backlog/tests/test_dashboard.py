@@ -69,8 +69,8 @@ class TestAdminDashboard:
     def test_admin_sees_header_kpis_users_and_activity(self, client):
         admin = UserFactory(role=User.Role.ADMINISTRATOR, name="Ana Admin")
         UserFactory(role=User.Role.REQUESTER)
-        ec = ECFactory(status=EC.Status.IN_VALIDATION, requester=admin)
         ReleaseFactory(is_open=True)
+        ec = ECFactory(status=EC.Status.IN_VALIDATION, requester=admin, release=None)
         client.force_login(admin)
 
         response = client.get(reverse("backlog:dashboard"))
