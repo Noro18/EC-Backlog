@@ -24,6 +24,7 @@ from .selectors import (
     cd_dashboard,
     dashboard_stats,
     des_team_dashboard,
+    full_audit_log_entries,
     release_with_ec_count,
     requester_dashboard,
     search_ecs,
@@ -38,6 +39,7 @@ from .tables import (
     ECDesTeamTable,
     ECRequesterTable,
     ECTable,
+    FullAuditLogTable,
     ReleaseTable,
 )
 
@@ -239,4 +241,17 @@ class RecordGoLiveView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.success(request, f"Go-live de {self.release.release_code} registado.")
         return redirect("backlog:release_detail", pk=self.release.pk)
 
+class AuditLogListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView):
+    """Administrator-only full audit log view."""
 
+    table_class = FullAuditLogTable
+    template_name = "backlog/audit_log.html"
+    paginate_by = 25
+
+    def test_func(self):
+        return self.request.user.role == User.Role.ADMINISTRATOR
+
+    def get_queryset(self):
+        return full_audit_log_entries()
+
+    
