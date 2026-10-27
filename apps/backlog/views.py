@@ -155,6 +155,14 @@ class ECDetailView(LoginRequiredMixin, DetailView):
         context["status_badge_class"] = EC_BADGE_CLASSES.get(ec.status, "text-bg-secondary")
         context["timeline"] = build_ec_timeline(ec)
         context["can_edit"] = can_edit_ec(ec, self.request.user)
+        versions = list(ec.versions.all())
+        latest_version = versions[0] if versions else None
+        context["latest_document_version"] = latest_version
+        context["latest_document_can_preview"] = bool(
+            latest_version
+            and latest_version.file
+            and latest_version.file.name.lower().endswith((".pdf", ".docx"))
+        )
         return context
 
 
@@ -270,5 +278,4 @@ class PendingECListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView
 
     def get_queryset(self):
         return pending_ecs(self.request.user)
-
 
