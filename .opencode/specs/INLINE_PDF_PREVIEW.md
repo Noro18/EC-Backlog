@@ -10,6 +10,8 @@ inline in the page rather than requiring the user to open/download it separately
 - PDF: show an embedded, browser-readable preview for the latest `DocumentVersion` only.
 - DOCX: convert the latest original DOCX to a PDF preview on the server and show that PDF inline.
   The original DOCX remains unchanged and downloadable in its original format.
+- On large screens, give the EC information/document column 8 of 12 grid columns and the timeline
+  column 4 of 12; the preview fills the document column. Columns stack on smaller screens.
 - Other unsupported file types: do not try to convert or embed them; retain a usable download/open
   link and show a clear Portuguese fallback message.
 - EC with no attached file: show neither an empty viewer nor a broken link.
