@@ -1,7 +1,6 @@
 # Spec — Inline PDF Preview on EC Detail (`Preview de PDF`)
 
-**Status:** DRAFT (scope expanded to include DOCX preview); implementation is blocked until the
-media-access decision in Issue #37 is resolved and this revised scope is approved.
+**Status:** SPEC_APPROVED (revised scope includes DOCX preview and the Issue #37 access decision).
 
 ## Objective
 
@@ -23,20 +22,20 @@ RNF05 (usability). It does not change upload validation or document-version beha
 
 ## Blocking Decision — Issue #37
 
-Issue #37 is open and has not selected between:
+**Decision: Option B.** Preview and download require an authenticated session. Any authenticated
+application role that can open the current EC detail page may preview/download the EC's documents;
+anonymous users may not. This matches `ECDetailView` (`LoginRequiredMixin`) and does not introduce
+new per-role restrictions.
 
-- **Option A:** keep the current public media URLs, accepted for an internal LAN/VPN deployment; or
-- **Option B:** serve documents through an authenticated download/preview view with role checks.
-
-Issue #61 requires preview access to follow the same permission rules as document downloads. The
-implementation path for serving the preview **must not be finalized until Issue #37 is decided**.
-Embedding the current raw media URL is not a way to bypass a future access restriction.
+Both preview and original-file downloads must use the protected document endpoint. Remove or replace
+the development `/media/` route in `config/urls.py` so it cannot bypass authentication. Production
+media serving must likewise route through the protected policy rather than exposing raw file URLs.
 
 ## Tech Stack
 
 Django 6.1, existing `DocumentVersion.file` (`FileField`), a browser PDF viewer, and LibreOffice in
 headless mode to convert DOCX files to PDF. LibreOffice is a server-side system executable, not a
-Python package managed by `uv`; it must be available in each runtime environment that performs
+Python package managed by `uv`; it must be installed in each runtime environment that performs
 preview conversion. No model or database dependency is added.
 
 ## Commands
@@ -62,11 +61,11 @@ templates/backlog/ec_detail.html  # EDIT: inline latest PDF; preserve download l
 
 apps/documents/
 ├── services.py  # add DOCX-to-PDF conversion using LibreOffice headless; keep original unchanged
-├── views.py     # NEW: serve the latest PDF or temporary DOCX-derived PDF inline
-├── urls.py      # NEW: preview endpoint; apply selected access policy
+├── views.py     # NEW: authenticated preview/original-download endpoint
+├── urls.py      # NEW: authenticated document endpoint
 └── tests/       # add preview/access tests and conversion tests with converter mocked
 
-config/urls.py   # EDIT: include the documents preview URLconf
+config/urls.py   # EDIT: include documents URLs and remove the public development media route
 ```
 
 The EC detail view already prefetches `versions` and `versions__review`; use the prefetched
@@ -80,15 +79,8 @@ version. Set a bounded conversion timeout and clean up temporary output after se
 conversion fails or times out, the EC detail page remains usable, the original DOCX download stays
 available, and a Portuguese message explains that preview is unavailable.
 
-Additional file-serving changes depend on Issue #37:
-
-| Issue #37 decision | Additional changes potentially required |
-|---|---|
-| Option A — public media accepted for internal LAN/VPN | The preview endpoint may be public, consistent with the current original file URL policy. |
-| Option B — authenticated media access | Protect the preview endpoint and downloads in `apps/documents/views.py`/`apps/documents/urls.py`, and ensure raw `/media/` serving cannot bypass the same access rule. Add view-access tests under `apps/documents/tests/`. |
-
-Do not implement either access model by assumption. Update this spec with the selected Issue #37
-decision before implementation approval.
+All file links on the EC detail page, including older-version downloads, must use this authenticated
+endpoint. Do not leave raw `DocumentVersion.file.url` links that bypass the login check.
 
 ## Database Schema Changes
 
@@ -102,7 +94,7 @@ existing version ordering (`-id`).
 
 | Latest document | Expected output |
 |---|---|
-| PDF exists | Inline viewer displays the latest PDF; the original PDF remains available to open/download. |
+| PDF exists | Authenticated inline viewer displays the latest PDF; the original PDF remains available to download. |
 | DOCX exists and conversion succeeds | Inline viewer displays its temporary PDF derivative; download still returns the original DOCX. |
 | DOCX exists and conversion fails | No broken viewer; original DOCX download remains, with a Portuguese preview-unavailable message. |
 | Unsupported non-PDF exists | No conversion/viewer; existing download/open link and Portuguese explanation are shown. |
@@ -121,8 +113,7 @@ the latest version.
    the older PDF.
 5. Unsupported non-PDF → no conversion attempt; retain download/open link.
 6. Missing file value → treat like no attached file, with no broken URL.
-7. File preview/download access follows the policy selected for Issue #37, including when the embed
-   is loaded separately by the browser.
+7. An anonymous request for either preview or original download is redirected to login.
 8. Preview markup is lazy-loaded below the fold to limit page weight.
 
 ## Acceptance Criteria
@@ -133,18 +124,15 @@ the latest version.
 3. An EC without a document shows no empty viewer or broken link.
 4. Only the latest version is embedded; previous versions remain accessible through history links.
 5. Conversion failure/timeout shows a friendly fallback and preserves original download.
-6. Preview and download permissions match the decision made for Issue #37.
+6. All authenticated roles who can view EC detail may preview and download; anonymous users may not.
+   Raw `/media/` URLs cannot bypass this check in development or production.
 7. Tests cover PDF, DOCX conversion, conversion failure, unsupported file, no-file, and latest-version
    behavior.
 8. No model/migration changes; tests and `ruff check .` pass.
 
-## Decision Needed Before `SPEC_APPROVED`
+## Runtime Requirement
 
-1. Resolve Issue #37 (Option A or Option B), then record the choice and final file-serving/access
-   control path here.
-2. Confirm the deployment environment can install/run LibreOffice headless. No Dockerfile or other
-   deployment image definition currently exists in this repository, so document the runtime setup
-   needed for local and production environments.
-
-Until these decisions are recorded and this expanded spec is approved, it remains a draft; no
-application code should be written for Issue #61.
+Install LibreOffice headless in the runtime environment where DOCX previews are generated. The
+repository currently has no Dockerfile or deployment image definition; document the local/server
+installation requirement as part of implementation notes. Tests must mock the converter executable
+so the Python test suite does not require LibreOffice to be installed.
