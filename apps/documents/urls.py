@@ -4,6 +4,7 @@ from .views import (
     DocumentDownloadView,
     DocumentPreviewView,
     DocumentVersionsListView,
+    ECVersionsGalleryView,
 )
 
 app_name = "documents"
@@ -15,5 +16,10 @@ urlpatterns = [
         "document-versions/",
         DocumentVersionsListView.as_view(),
         name="document_versions",
+    ),
+    path(
+        "document-versions/<int:ec_pk>/",
+        ECVersionsGalleryView.as_view(),
+        name="ec_versions",
     ),
 ]
