@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% block title %}Versões de EC-{{ ec.ec_code }} — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-4">
+    <div>
+        <h3 class="mb-1">
+            <i class="bi bi-files text-secondary me-2"></i>
+            Versões de <span class="text-primary">EC-{{ ec.ec_code }}</span>
+        </h3>
+        <p class="text-muted mb-0">
+            {{ ec.reference|default:"—" }}
+            <span class="badge text-bg-secondary">{{ ec.get_status_display }}</span>
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'documents:document_versions' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+        <a href="{% url 'backlog:ec_detail' ec.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right"></i> Ver EC completa
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    {% for version in versions %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm" data-version-card="{{ version.pk }}">
+            {% if version.file %}
+            <span data-thumbnail-url="{% url 'documents:preview' version.pk %}" class="document-thumbnail d-inline-block">
+                <canvas class="d-none w-100"></canvas>
+                <span class="document-thumbnail-fallback text-center w-100 p-4 text-secondary" style="display:none">
+                    <i class="bi bi-file-earmark-pdf fs-1"></i>
+                </span>
+            </span>
+            {% else %}
+            <span class="document-thumbnail document-thumbnail-fallback text-center w-100 p-4 text-secondary">
+                <i class="bi bi-file-earmark fs-1"></i>
+            </span>
+            {% endif %}
+            <div class="card-body pt-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge text-bg-primary">{{ version.version_number }}</span>
+                    <span class="small text-muted">{{ version.uploaded_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                <p class="small text-muted text-truncate mb-2">
+                    <i class="bi bi-person me-1"></i>{{ version.uploaded_by.get_full_name|default:version.uploaded_by.get_username }}
+                </p>
+                {% if version.change_reason %}
+                <p class="small text-body-secondary text-truncate mb-2" title="{{ version.change_reason }}">
+                    {{ version.change_reason }}
+                </p>
+                {% endif %}
+                {% if version.file %}
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-primary flex-fill"
+                            data-bs-toggle="modal" data-bs-target="#previewModal"
+                            data-preview-url="{% url 'documents:preview' version.pk %}">
+                        <i class="bi bi-eye"></i> Pré-visualizar
+                    </button>
+                    <a href="{% url 'documents:download' version.pk %}" class="btn btn-sm btn-outline-secondary flex-fill">
+                        <i class="bi bi-download"></i> Descarregar
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Pré-visualização</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="previewFrame" src="" class="w-100 border-0" style="height: 75vh;"
+                        title="Pré-visualização do documento"></iframe>
+            </div>
+            <div class="modal-footer">
+                <a id="previewDownloadLink" class="d-none" href="#" aria-hidden="true"></a>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/document_modal_preview.js' %}" defer></script>
+<script src="{% static 'js/document_thumbnails.js' %}" defer></script>
+{% endblock %}

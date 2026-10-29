@@ -9,12 +9,19 @@ document.addEventListener("DOMContentLoaded", function () {
             button.addEventListener("click", function () {
                 var url = button.dataset.previewUrl;
                 frame.src = url;
-                download.href = url.replace(/\/preview\/$/, "/download/");
+                if (download) {
+                    download.href = url.replace(/\/preview\/$/, "/download/");
+                    download.textContent = "Descarregar original";
+                    download.classList.remove("d-none");
+                }
             });
         }
     );
 
     modal.addEventListener("hidden.bs.modal", function () {
         frame.src = "";
+        if (download) {
+            download.classList.add("d-none");
+        }
     });
 });
