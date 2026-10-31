@@ -75,7 +75,7 @@ Rules:
 |---|---|---|
 | `accounts` | Custom `User`, roles (Requester, CD, DES Team, Administrator), permissions | RNF01 |
 | `backlog` | `EC` and `Release` models, ID generation, Release capacity rule, list/search/filters, production go-live date, historical import | RF01–RF04, RF12, RNF04 |
-| `documents` | Uploaded specification files, automatic versioning, version history, read-only administrator consultation page for document versions (`/documents/document-versions/`) | RF05, RF06 |
+| `documents` | Uploaded specification files, automatic versioning, version history, read-only administrator consultation: an EC-chip list (`/documents/document-versions/`) plus a per-EC version thumbnail gallery (`/documents/document-versions/<ec_pk>/`) rendered with vendored PDF.js | RF05, RF06 |
 | `workflow` | Assigning a CD, approve/reject with comment, routing to DES, status transitions, email notifications | RF07–RF11, RNF03 |
 | `core` | Shared abstract models (timestamps) and small helpers only | none |
 
