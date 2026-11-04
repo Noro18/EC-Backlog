@@ -1,6 +1,83 @@
+import os
+import shutil
+import subprocess
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 from django.core.exceptions import ValidationError
 
 from .models import DocumentVersion
+
+
+class DocumentConversionError(RuntimeError):
+    """Raised when a DOCX file cannot be converted to a preview PDF."""
+
+
+def _libreoffice_binary():
+    """Find LibreOffice on PATH, or use an explicit configured executable path."""
+    configured_path = os.environ.get("LIBREOFFICE_BINARY")
+    if configured_path:
+        return configured_path
+
+    return (
+        shutil.which("soffice")
+        or shutil.which("soffice.exe")
+        or shutil.which("soffice.com")
+    )
+
+
+def convert_docx_to_pdf(source_file) -> bytes:
+    """Convert a DOCX file to temporary PDF bytes without altering the original.
+
+    LibreOffice must be installed on the server. The PDF is generated in a temporary
+    directory and returned in memory; it is not stored as another DocumentVersion.
+    """
+    if Path(source_file.name).suffix.lower() != ".docx":
+        raise DocumentConversionError("Only DOCX files can be converted for preview.")
+
+    executable = _libreoffice_binary()
+    if not executable:
+        raise DocumentConversionError(
+            "LibreOffice was not found. Install it or configure LIBREOFFICE_BINARY."
+        )
+
+    try:
+        with TemporaryDirectory(prefix="ec-doc-preview-") as temporary_directory:
+            work_dir = Path(temporary_directory)
+            source_path = work_dir / "source.docx"
+            pdf_path = work_dir / "source.pdf"
+            profile_path = work_dir / "libreoffice-profile"
+            profile_path.mkdir()
+
+            with source_file.open("rb") as uploaded_file:
+                source_path.write_bytes(uploaded_file.read())
+
+            subprocess.run(
+                [
+                    executable,
+                    "--headless",
+                    f"-env:UserInstallation={profile_path.as_uri()}",
+                    "--convert-to",
+                    "pdf",
+                    "--outdir",
+                    str(work_dir),
+                    str(source_path),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if not pdf_path.is_file() or pdf_path.stat().st_size == 0:
+                raise DocumentConversionError(
+                    "LibreOffice did not produce a readable PDF preview."
+                )
+            return pdf_path.read_bytes()
+    except subprocess.TimeoutExpired as error:
+        raise DocumentConversionError("DOCX to PDF conversion timed out.") from error
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise DocumentConversionError("DOCX to PDF conversion failed.") from error
 
 
 def create_first_version(ec, file, uploaded_by, change_reason=""):

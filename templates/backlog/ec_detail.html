@@ -65,7 +65,7 @@
 
 <div class="row g-3">
 
-    <div class="col-lg-7">
+    <div class="col-lg-8">
 
         <div class="card">
             <div class="card-header bg-body fw-semibold">Informação Geral</div>
@@ -154,20 +154,41 @@
                                 <p class="mb-0 small text-muted">{{ version.change_reason }}</p>
                             {% endif %}
                         </div>
-                        <a href="{{ version.file.url }}" class="btn btn-sm btn-outline-secondary" target="_blank">
-                            <i class="bi bi-file-earmark"></i> Abrir
-                        </a>
+                        {% if version.file %}
+                            <a href="{% url 'documents:download' version.pk %}"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-file-earmark-arrow-down"></i> Descarregar
+                            </a>
+                        {% endif %}
                     </div>
                 {% empty %}
                     <p class="text-muted mb-0">Ainda sem documentos.</p>
                 {% endfor %}
+
+                {% if latest_document_can_preview %}
+                    <div class="mb-3">
+                        <h6 class="mb-2">Pré-visualização da versão mais recente</h6>
+                        <iframe
+                            src="{% url 'documents:preview' latest_document_version.pk %}"
+                            class="w-100 border rounded"
+                            style="height: 70vh;"
+                            loading="lazy"
+                            title="Pré-visualização do documento {{ latest_document_version.version_number }}">
+                        </iframe>
+                    </div>
+                {% elif latest_document_version and latest_document_version.file %}
+                    <p class="text-muted small mb-3">
+                        Este tipo de ficheiro não tem pré-visualização. Descarregue o documento para o abrir.
+                    </p>
+                {% endif %}
+
             </div>
         </div>
 
     </div>
 
 
-    <div class="col-lg-5">
+    <div class="col-lg-4">
 
         <div class="card">
             <div class="card-header bg-body fw-semibold">Histórico</div>

@@ -162,5 +162,6 @@ An arrow means "may import from". Each app may import only from apps to its righ
 - `DEBUG = False`, a long random `SECRET_KEY`, and `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` set to the server address in production.
 - Run `uv run python manage.py check --deploy` and address every warning, or record why it is accepted.
 - Uploaded documents are validated (type and size) and stored outside the code tree on a persistent volume.
-- Uploaded files are served under `/media/` by the web server in production (nginx: `location /media/ { alias <MEDIA_ROOT>/; }`); Django only registers this route when `DEBUG = True` (`django.conf.urls.static.static` in `config/urls.py`).
+- All document previews and downloads go through authenticated views in `apps.documents`. Do not expose raw `/media/` URLs through Django's development `static()` helper or an unauthenticated production web-server alias. Every currently authenticated application role may access documents when it can open the EC detail page.
+- DOCX preview conversion uses LibreOffice in headless mode on the application server. Install it in each runtime environment and set `LIBREOFFICE_BINARY` if its executable is not on `PATH`. Generated preview PDFs are temporary; the uploaded DOCX remains the downloadable original.
 - Backups are stored on a different machine, and a restore has been tested at least once. On SQLite this is the whole production database in one file: back it up with the `.backup` command, never `cp` while the server is writing.
