@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% load render_table from django_tables2 %}
+{% load static %}
+{% block title %}Versões de Documentos — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-4">
+    <div>
+        <h3 class="mb-1"><i class="bi bi-folder-check text-secondary me-2"></i>Versões de Documentos</h3>
+        <p class="text-muted mb-0">
+            Histórico de todas as versões de documentos de todas as ECs (somente leitura).
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'backlog:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar ao Dashboard
+        </a>
+    </div>
+</div>
+
+<form method="get" class="row g-2 mb-3 justify-content-end">
+    <div class="col-auto">
+        <input type="search" name="q" value="{{ q }}" class="form-control form-control-sm"
+               placeholder="Procurar por EC, referência ou versão" aria-label="Procurar versões">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-search"></i> Procurar
+        </button>
+    </div>
+</form>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% render_table table %}
+    </div>
+</div>
+
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Pré-visualização</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="previewFrame" src="" class="w-100 border-0" style="height: 75vh;"
+                        title="Pré-visualização do documento"></iframe>
+            </div>
+            <div class="modal-footer">
+                <a id="previewDownloadLink" href="#" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download"></i> Descarregar original
+                </a>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/document_modal_preview.js' %}" defer></script>
+{% endblock %}
+

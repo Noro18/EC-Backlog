@@ -1,15 +1,20 @@
 from io import BytesIO
 from pathlib import Path
 
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django_tables2 import SingleTableView
+
+from apps.accounts.models import User
 
 from .models import DocumentVersion
+from .selectors import document_versions
 from .services import DocumentConversionError, convert_docx_to_pdf
+from .tables import DocumentVersionTable
 
 
 def _get_document_file(pk):
@@ -70,3 +75,26 @@ class DocumentDownloadView(LoginRequiredMixin, View):
             as_attachment=True,
             filename=Path(version.file.name).name,
         )
+
+
+class DocumentVersionsListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView):
+    """RF05 consultation: every document version across all ECs, newest first.
+
+    Administrator-only read-only page (spec DOCUMENT_VERSIONS_PAGE.md):
+    uploads and version numbering stay in the RF03/RF05 flows.
+    """
+
+    table_class = DocumentVersionTable
+    template_name = "documents/document_versions.html"
+    paginate_by = 25
+
+    def test_func(self):
+        return self.request.user.role == User.Role.ADMINISTRATOR
+
+    def get_queryset(self):
+        return document_versions(q=self.request.GET.get("q"))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q"] = self.request.GET.get("q", "")
+        return context
