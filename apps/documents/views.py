@@ -1,14 +1,18 @@
 from io import BytesIO
 from pathlib import Path
 
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.generic import TemplateView
+
+from apps.accounts.models import User
 
 from .models import DocumentVersion
+from .selectors import ec_versions, version_ecs
 from .services import DocumentConversionError, convert_docx_to_pdf
 
 
@@ -70,3 +74,45 @@ class DocumentDownloadView(LoginRequiredMixin, View):
             as_attachment=True,
             filename=Path(version.file.name).name,
         )
+
+
+class DocumentVersionsListView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    """RF05 consultation: one chip per EC that owns document versions.
+
+    Administrator-only read-only page (spec DOCUMENT_VERSIONS_PAGE.md):
+    uploads and version numbering stay in the RF03/RF05 flows.
+    """
+
+    template_name = "documents/document_versions.html"
+
+    def test_func(self):
+        return self.request.user.role == User.Role.ADMINISTRATOR
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        q = self.request.GET.get("q", "")
+        context["q"] = q
+        context["chips"] = version_ecs(q=q)
+        return context
+
+
+class ECVersionsGalleryView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    """RF05 consultation: one gallery card per version of a single EC.
+
+    404 when the EC is unknown or owns no document versions — chips only
+    ever link to ECs with documents, but a typed URL must fail safely.
+    """
+
+    template_name = "documents/ec_versions_gallery.html"
+
+    def test_func(self):
+        return self.request.user.role == User.Role.ADMINISTRATOR
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        versions = list(ec_versions(self.kwargs["ec_pk"]))
+        if not versions:
+            raise Http404("This EC has no document versions.")
+        context["ec"] = versions[0].ec
+        context["versions"] = versions
+        return context
