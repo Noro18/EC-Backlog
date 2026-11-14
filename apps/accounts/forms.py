@@ -88,3 +88,35 @@ class UserUpdateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["username"].disabled = True
         self.fields["name"].required = True
+
+class ProfileUpdateForm(forms.ModelForm):
+    """Self-service profile form (spec PROFILE_SELF_EDIT.md).
+
+    Only `name` and `email` are writable here; username and role stay
+    read-only (the page displays them, the Administrator owns their changes).
+    Validation lives in the form; the write happens in services.update_profile.
+    """
+
+    class Meta:
+        model = User
+        fields = ("name", "email")
+        labels = {
+            "name": "Nome",
+            "email": "Email",
+        }
+        error_message = {
+            "email": {"unique": "Este email já está em uso."}
+        }
+        widgets = {
+            "name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "ex: maria@example.com"}
+            ),
+        }
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Same contract as the admin forms: a profile must carry a name.
+        self.fields["name"].required = True
+
+     
+
+
