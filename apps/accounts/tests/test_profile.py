@@ -92,7 +92,7 @@ class TestProfileData:
         assert "Dados atualizados com sucesso." in html
         assert user.name == "Maria da Costa"
         assert user.email == "maria.costa@example.com"
-        assert "Maria da Costa" in html  # navbar identity line follows the edit
+        assert response.redirect_chain == [(reverse("backlog:dashboard"), 302)]
 
     def test_duplicate_email_rejected_in_portuguese(self, client):
         login_with(client, seeded_user(username="maria.gusmao"))

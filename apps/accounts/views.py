@@ -47,13 +47,13 @@ class ProfileView(LoginRequiredMixin, View):
             if senha.is_valid():
                 change_password(senha, request)
                 messages.success(request, "Palavra-passe alterada com sucesso.")
-                return redirect("accounts:profile")
+                return redirect("backlog:dashboard")
             return self._render(request, senha=senha)
         pessoa = ProfileUpdateForm(instance=request.user, data=request.POST)
         if pessoa.is_valid():
             update_profile(pessoa)
             messages.success(request, "Dados atualizados com sucesso.")
-            return redirect("accounts:profile")
+            return redirect("backlog:dashboard")
         return self._render(request, pessoa=pessoa)
 
     def _render(self, request, pessoa=None, senha=None):
