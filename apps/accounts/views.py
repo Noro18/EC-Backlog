@@ -3,20 +3,68 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, View
 from django_tables2 import SingleTableView
 
-from .forms import UserCreateForm, UserUpdateForm
+from .forms import (
+    ProfilePasswordChangeForm,
+    ProfileUpdateForm,
+    UserCreateForm,
+    UserUpdateForm,
+)
 from .models import User
 from .selectors import list_users
-from .services import create_user, deactivate_user, update_user
+from .services import (
+    change_password,
+    create_user,
+    deactivate_user,
+    update_profile,
+    update_user,
+)
 from .tables import UserTable
 
 
 class TTLoginView(LoginView):
     template_name = "accounts/login.html"
+
+
+class ProfileView(LoginRequiredMixin, View):
+    """Meu Perfil (spec PROFILE_SELF_EDIT.md): self-service data for any role.
+
+    Two forms, two POST kinds. Only name/email/password are writable here;
+    username and role are read-only (the Administrator owns those changes).
+    """
+
+    def get(self, request):
+        return self._render(request)
+
+    def post(self, request):
+        kind = request.POST.get("form")
+        if kind == "senha":
+            senha = ProfilePasswordChangeForm(user=request.user, data=request.POST)
+            if senha.is_valid():
+                change_password(senha, request)
+                messages.success(request, "Palavra-passe alterada com sucesso.")
+                return redirect("backlog:dashboard")
+            return self._render(request, senha=senha)
+        pessoa = ProfileUpdateForm(instance=request.user, data=request.POST)
+        if pessoa.is_valid():
+            update_profile(pessoa)
+            messages.success(request, "Dados atualizados com sucesso.")
+            return redirect("backlog:dashboard")
+        return self._render(request, pessoa=pessoa)
+
+    def _render(self, request, pessoa=None, senha=None):
+        return render(
+            request,
+            "accounts/profile.html",
+            {
+                "pessoa": pessoa or ProfileUpdateForm(instance=request.user),
+                "senha": senha or ProfilePasswordChangeForm(user=request.user),
+            },
+        )
 
 
 class UserListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView):
@@ -25,10 +73,10 @@ class UserListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView):
 
     def get_queryset(self):
         return list_users(self.request.GET.get("q"))
-    
+
     def test_func(self):
         return self.request.user.role == "administrator"
-    
+
 
 class UserCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     """USER_CREATE.md: same gate as UserListView, saving through the service."""
