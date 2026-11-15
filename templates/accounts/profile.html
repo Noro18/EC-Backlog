@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil — Sistema de Gestão de Backlog EC{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-4">
+    <div>
+        <h3 class="mb-1"><i class="bi bi-person-circle text-secondary me-2"></i>Meu Perfil</h3>
+        <p class="text-muted mb-0">
+            Gerir os seus dados pessoais e a palavra-passe. Perfil atual:
+            <span class="badge text-bg-secondary">{{ user.get_role_display }}</span>
+        </p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="bi bi-person me-2"></i>Dados pessoais</h5>
+                <form method="post" action="{% url 'accounts:profile' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="form" value="pessoa">
+                    <div class="mb-3">
+                        <label class="form-label">Nome de utilizador</label>
+                        <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                        <div class="form-text">
+                            A alteração do nome de utilizador é feita pelo Administrador.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ pessoa.name.id_for_label }}">Nome</label>
+                        <input type="text" name="name" id="{{ pessoa.name.id_for_label }}"
+                               class="form-control{% if pessoa.name.errors %} is-invalid{% endif %}"
+                               value="{{ pessoa.name.value|default:'' }}">
+                        {% for error in pessoa.name.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ pessoa.email.id_for_label }}">Email</label>
+                        <input type="email" name="email" id="{{ pessoa.email.id_for_label }}"
+                               class="form-control{% if pessoa.email.errors %} is-invalid{% endif %}"
+                               value="{{ pessoa.email.value|default:'' }}">
+                        {% for error in pessoa.email.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2"></i> Guardar alterações
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><i class="bi bi-key me-2"></i>Alterar palavra-passe</h5>
+                <form method="post" action="{% url 'accounts:profile' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="form" value="senha">
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ senha.old_password.id_for_label }}">Palavra-passe atual</label>
+                        <input type="password" name="old_password" autocomplete="current-password"
+                               class="form-control{% if senha.old_password.errors %} is-invalid{% endif %}" required>
+                        {% for error in senha.old_password.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ senha.new_password1.id_for_label }}">Nova palavra-passe</label>
+                        <input type="password" name="new_password1" autocomplete="new-password"
+                               class="form-control{% if senha.new_password1.errors %} is-invalid{% endif %}" required>
+                        {% for error in senha.new_password1.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ senha.new_password2.id_for_label }}">Confirmar nova palavra-passe</label>
+                        <input type="password" name="new_password2" autocomplete="new-password"
+                               class="form-control{% if senha.new_password2.errors %} is-invalid{% endif %}" required>
+                        {% for error in senha.new_password2.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-key"></i> Alterar palavra-passe
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

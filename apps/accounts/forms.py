@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
 
 from .models import User
 
@@ -104,19 +104,43 @@ class ProfileUpdateForm(forms.ModelForm):
             "name": "Nome",
             "email": "Email",
         }
-        error_message = {
-            "email": {"unique": "Este email já está em uso."}
+        error_messages = {
+            "email": {"unique": "Este email já está em uso."},
         }
         widgets = {
             "name": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "ex: maria@example.com"}
+                attrs={"class": "form-control", "placeholder": "ex.: Maria da Costa"}
+            ),
+            "email": forms.EmailInput(
+                attrs={"class": "form-control", "placeholder": "ex.: maria@example.com"}
             ),
         }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Same contract as the admin forms: a profile must carry a name.
         self.fields["name"].required = True
 
+
+class ProfilePasswordChangeForm(PasswordChangeForm):
+    """Meu Perfil password card (spec PROFILE_SELF_EDIT.md).
+
+    Same rules as the admin-created passwords (AUTH_PASSWORD_VALIDATORS);
+    the current-password failure is translated because the page is fully
+    Portuguese.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["old_password"].label = "Palavra-passe atual"
+        self.fields["new_password1"].label = "Nova palavra-passe"
+        self.fields["new_password2"].label = "Confirmar nova palavra-passe"
+
+    def clean_old_password(self):
+        old_password = self.cleaned_data.get("old_password")
+        if not self.user.check_password(old_password):
+            raise forms.ValidationError("A palavra-passe atual está incorreta.")
+        return old_password
      
 
 

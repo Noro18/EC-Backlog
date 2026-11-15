@@ -9,7 +9,7 @@ from django.views.generic import CreateView, UpdateView, View
 from django_tables2 import SingleTableView
 
 from .forms import (
-    PasswordChangeForm,
+    ProfilePasswordChangeForm,
     ProfileUpdateForm,
     UserCreateForm,
     UserUpdateForm,
@@ -43,7 +43,7 @@ class ProfileView(LoginRequiredMixin, View):
     def post(self, request):
         kind = request.POST.get("form")
         if kind == "senha":
-            senha = PasswordChangeForm(user=request.user, data=request.POST)
+            senha = ProfilePasswordChangeForm(user=request.user, data=request.POST)
             if senha.is_valid():
                 change_password(senha, request)
                 messages.success(request, "Palavra-passe alterada com sucesso.")
@@ -62,7 +62,7 @@ class ProfileView(LoginRequiredMixin, View):
             "accounts/profile.html",
             {
                 "pessoa": pessoa or ProfileUpdateForm(instance=request.user),
-                "senha": senha or PasswordChangeForm(user=request.user),
+                "senha": senha or ProfilePasswordChangeForm(user=request.user),
             },
         )
 
