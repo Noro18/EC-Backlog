@@ -34,6 +34,19 @@ def docx_file(name="spec.docx"):
 
 
 class TestReleaseList:
+    @pytest.fixture(autouse=True)
+    def _login(self, client):
+        """Every release-list test runs as a signed-in administrator."""
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+
+    def test_anonymous_users_are_redirected_to_login(self):
+        from django.test import Client
+
+        response = Client().get(reverse("backlog:release_list"))
+
+        assert response.status_code == 302
+        assert reverse("accounts:login") in response.url
+
     def test_returns_200(self, client):
         response = client.get(reverse("backlog:release_list"))
         assert response.status_code == 200
@@ -280,6 +293,20 @@ class TestECListSearch:
 
 
 class TestReleaseDetail:
+    @pytest.fixture(autouse=True)
+    def _login(self, client):
+        """Every release-detail test runs as a signed-in administrator."""
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+
+    def test_anonymous_users_are_redirected_to_login(self):
+        from django.test import Client
+
+        release = ReleaseFactory()
+        response = Client().get(reverse("backlog:release_detail", args=[release.pk]))
+
+        assert response.status_code == 302
+        assert reverse("accounts:login") in response.url
+
     def test_returns_200_and_release_in_context(self, client):
         release = ReleaseFactory(year=2027, number_sequence=42)
         response = client.get(reverse("backlog:release_detail", args=[release.pk]))
@@ -887,6 +914,27 @@ class TestECDetail:
 
         assert "v1.0" in html
         assert "enviado por" in html
+
+    def test_document_list_is_oldest_first(self, client):
+        """The Documentos card lists versions v1.0 → v1.1 (ascending)."""
+        ec = ECFactory()
+        _upload(ec, "v1.0")
+        _upload(ec, "v1.1")
+        client.force_login(ec.requester)
+        html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
+
+        assert html.index("v1.0") < html.index("v1.1")
+
+    def test_preview_label_names_the_previewed_version(self, client):
+        """The heading states which version the iframe shows — no ambiguity."""
+        ec = ECFactory()
+        _upload(ec, "v1.0")
+        _upload(ec, "v1.1")
+        client.force_login(ec.requester)
+        html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
+
+        assert "Pré-visualização da versão v1.1" in html
+        assert "da versão mais recente" not in html
 
     def test_timeline_creation_event_first(self, client):
         ec = ECFactory()

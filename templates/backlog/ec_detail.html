@@ -142,7 +142,7 @@
         <div class="card mt-3">
             <div class="card-header bg-body fw-semibold">Documentos</div>
             <div class="card-body">
-                {% for version in ec.versions.all %}
+                {% for version in ec.versions.all reversed %}
                     <div class="d-flex justify-content-between align-items-start py-2 {% if not forloop.last %}border-bottom{% endif %}">
                         <div>
                             <span class="fw-semibold">{{ version.version_number }}</span>
@@ -164,26 +164,36 @@
                 {% empty %}
                     <p class="text-muted mb-0">Ainda sem documentos.</p>
                 {% endfor %}
-
-                {% if latest_document_can_preview %}
-                    <div class="mb-3">
-                        <h6 class="mb-2">Pré-visualização da versão mais recente</h6>
-                        <iframe
-                            src="{% url 'documents:preview' latest_document_version.pk %}"
-                            class="w-100 border rounded"
-                            style="height: 70vh;"
-                            loading="lazy"
-                            title="Pré-visualização do documento {{ latest_document_version.version_number }}">
-                        </iframe>
-                    </div>
-                {% elif latest_document_version and latest_document_version.file %}
-                    <p class="text-muted small mb-3">
-                        Este tipo de ficheiro não tem pré-visualização. Descarregue o documento para o abrir.
-                    </p>
-                {% endif %}
-
             </div>
         </div>
+
+        {% if latest_document_can_preview %}
+            <div class="card mt-3">
+                <div class="card-header bg-body fw-semibold">
+                    Pré-visualização da versão {{ latest_document_version.version_number }}
+                </div>
+                <div class="card-body">
+                    <iframe
+                        src="{% url 'documents:preview' latest_document_version.pk %}"
+                        class="w-100 border rounded"
+                        style="height: 70vh;"
+                        loading="lazy"
+                        title="Pré-visualização do documento {{ latest_document_version.version_number }}">
+                    </iframe>
+                </div>
+            </div>
+        {% elif latest_document_version and latest_document_version.file %}
+            <div class="card mt-3">
+                <div class="card-header bg-body fw-semibold">
+                    Pré-visualização da versão {{ latest_document_version.version_number }}
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-0">
+                        Este tipo de ficheiro não tem pré-visualização. Descarregue o documento para o abrir.
+                    </p>
+                </div>
+            </div>
+        {% endif %}
 
     </div>
 
