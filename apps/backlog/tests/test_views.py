@@ -19,6 +19,7 @@ from apps.backlog.models import EC, Release
 from apps.backlog.services import NEW_RELEASE
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 from apps.documents.models import DocumentVersion
+from apps.documents.tests.factories import DocumentVersionFactory
 
 pytestmark = pytest.mark.django_db  # marka wainihra test ida access o sentuh database ka lae
 
@@ -174,6 +175,33 @@ class TestECListVisibility:
         response = client.get(reverse("backlog:ec_list"))
 
         assert response.status_code == 302
+
+
+class TestECListVersionChips:
+    """ECTable "Versões" column — oldest chip first, dark badge on the latest."""
+
+    def test_chips_render_oldest_to_latest(self, client):
+        user = UserFactory(role=User.Role.ADMINISTRATOR)
+        client.force_login(user)
+        ec = ECFactory(requester=user)
+        DocumentVersionFactory(ec=ec, version_number="v1.0")
+        DocumentVersionFactory(ec=ec, version_number="v1.1")
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert "Versões" in page
+        assert "v1.0" in page
+        assert "v1.1" in page
+        assert page.index("v1.0") < page.index("v1.1")
+
+    def test_ec_without_versions_shows_placeholder(self, client):
+        user = UserFactory(role=User.Role.ADMINISTRATOR)
+        client.force_login(user)
+        ECFactory(requester=user)
+
+        page = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert "Sem versões" in page
 
 
 class TestECListSearch:

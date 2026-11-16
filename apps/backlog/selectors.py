@@ -376,20 +376,19 @@ def cd_dashboard(user) -> dict:
     approved_by_me = []
 
     for ec in ec_qs.prefetch_related("versions__review"):
-        latest = ec.versions.order_by("-id").first()
-        if not latest:
+        versions = list(ec.versions.order_by("id"))
+        if not versions:
             continue
-
+        latest = versions[-1]
         review = getattr(latest, "review", None)
         if review is None:
-            pending_review.append(
-                {
-                    "id": ec.id,
-                    "reference": ec.reference,
-                    "version": latest.version_number,
-                    "uploaded_at": latest.uploaded_at,
-                }
-            )
+            pending_review.append({
+                "id": ec.id,
+                "reference": ec.reference,
+                "version": latest.version_number,
+                "versions": [v.version_number for v in versions],
+                "uploaded_at": latest.uploaded_at,
+            })
         elif review.decision == "approved" and review.cd_id == user.id:
             approved_by_me.append(
                 {
