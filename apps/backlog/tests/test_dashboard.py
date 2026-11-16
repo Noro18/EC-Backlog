@@ -14,6 +14,7 @@ from django.urls import reverse
 from apps.backlog.models import EC
 from apps.backlog.selectors import (
     admin_dashboard,
+    cd_dashboard,
     dashboard_stats,
     des_team_dashboard,
     requester_dashboard,
@@ -362,6 +363,43 @@ class TestRequesterDashboard:
         assert "precisam da sua ação" not in html
         # The placeholder must be gone once the real widgets are in place.
         assert "em construção" not in html
+
+
+class TestCDDashboard:
+    """The CD pending-review queue — version chips oldest to latest."""
+
+    @staticmethod
+    def _upload(ec, version):
+        return ec.versions.create(
+            version_number=version,
+            file="documents/spec.pdf",
+            uploaded_by=ec.requester,
+        )
+
+    def test_pending_review_rows_carry_all_version_labels(self):
+        cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(responsible_cd=cd, reference="COR2026006")
+        self._upload(ec, "v1.0")
+        self._upload(ec, "v1.1")
+
+        pending = cd_dashboard(cd)["pending_review"]
+
+        assert len(pending) == 1
+        assert pending[0]["reference"] == "COR2026006"
+        assert pending[0]["versions"] == ["v1.0", "v1.1"]
+
+    def test_pending_table_renders_version_chips(self, client):
+        cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(responsible_cd=cd, reference="COR2026007")
+        self._upload(ec, "v1.0")
+        self._upload(ec, "v1.1")
+        client.force_login(cd)
+
+        html = client.get(reverse("backlog:dashboard")).content.decode()
+
+        assert "v1.0" in html
+        assert "v1.1" in html
+        assert html.index("v1.0") < html.index("v1.1")
 
 
 class TestDesTeamDashboard:

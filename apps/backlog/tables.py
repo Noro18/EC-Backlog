@@ -85,6 +85,22 @@ class ECTable(tables.Table):
     )
 
     status = tables.Column(verbose_name="Status", attrs={"th": {"class": "text-center"}})
+    versions = tables.TemplateColumn(
+        verbose_name="Versões",
+        orderable=False,
+        template_code="""
+            <div class="d-flex align-items-center gap-1">
+                {% for v in record.versions.all reversed %}
+                    {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
+                    <span class="badge {% if forloop.last %}text-bg-dark{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
+                        {{ v.version_number }}
+                    </span>
+                {% empty %}
+                    <span class="text-muted small">Sem versões</span>
+                {% endfor %}
+            </div>
+        """,
+    )
     is_imported = tables.TemplateColumn(
         verbose_name="Origem",
         orderable=False,
@@ -115,6 +131,7 @@ class ECTable(tables.Table):
             "responsible_cd",
             "creation_date",
             "status",
+            "versions",
             "is_imported",
         )
         attrs = {"class": "table table-sm table-hover align-middle mb-0"}
@@ -217,7 +234,7 @@ class CDPendingReviewTable(tables.Table):
             <div class="d-flex align-items-center gap-1">
                 {% for v in record.versions %}
                     {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
-                    <span class="badge {% if forloop.last %}text-bg-dark{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
+                    <span class="badge {% if forloop.last %}text-bg-secondary{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
                         {{ v }}
                     </span>
                 {% empty %}

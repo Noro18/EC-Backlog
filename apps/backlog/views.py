@@ -88,7 +88,7 @@ class ECListView(LoginRequiredMixin, SingleTableView):
             visible_ecs(self.request.user), # function visible_ecs ida ne'e bolu husi file selector.py
             q=params.get("q"),
             status=params.get("status"),
-        )
+        ).prefetch_related("versions")
 
 class ReleaseListView(SingleTableView):
     model = Release
@@ -218,7 +218,7 @@ class ReleaseDetailView(DetailView):
         release = self.object
 
         context["ec_table"] = ECTable(
-            release.ecs.select_related("requester", "responsible_cd"),
+            release.ecs.select_related("requester", "responsible_cd").prefetch_related("versions"),
             exclude=("release", "description", "action", "is_imported"),
         )
 
