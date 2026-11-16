@@ -83,7 +83,7 @@
                         <p class="text-muted mb-1">A versão atual aparece em destaque.</p>
                     </div>
                     <div class="card-body p-0">
-                        <div class="card-body p-0">
+                        <div class="table-responsive">
                             {% render_table req_table %}
                         </div>
                     </div>
@@ -150,7 +150,9 @@
                 ECs que precisam da sua revisão
             </div>
             <div class="card-body p-0">
-                {% render_table cd_table %}
+                <div class="table-responsive">
+                    {% render_table cd_table %}
+                </div>
             </div>
         </div>
 
@@ -179,7 +181,9 @@
                 Fila de Trabalho — Aguardando Ação da DES
             </div>
             <div class="card-body p-0">
-                {% render_table des_table %}
+                <div class="table-responsive">
+                    {% render_table des_table %}
+                </div>
             </div>
         </div>
     
@@ -250,7 +254,9 @@
                 Atividade recente
             </div>
             <div class="card-body">
-                {% render_table log_table %}
+                <div class="table-responsive">
+                    {% render_table log_table %}
+                </div>
                 <a class="d-inline-block mt-3 small fw-semibold text-decoration-none"
                    href="{% url 'backlog:audit_log' %}">
                     Ver todos os logs <i class="bi bi-arrow-right"></i>
