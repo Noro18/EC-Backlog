@@ -957,6 +957,57 @@ class TestECDetail:
         assert second.context["ec"] == ec
         assert len(large) == len(small)
 
+    def test_requester_cannot_open_another_requesters_ec(self, client):
+        """Issue #93: cross-user access to the detail page must be 404."""
+        ec = ECFactory()
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 404
+
+    def test_unassigned_cd_cannot_open_the_ec(self, client):
+        ec = ECFactory(responsible_cd=UserFactory(role=User.Role.CD))
+        intruder = UserFactory(role=User.Role.CD)
+        client.force_login(intruder)
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 404
+
+    def test_assigned_cd_can_open_the_ec(self, client):
+        cd = UserFactory(role=User.Role.CD)
+        ec = ECFactory(responsible_cd=cd)
+        client.force_login(cd)
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+
+    def test_des_team_cannot_open_a_non_closed_ec(self, client):
+        ec = ECFactory(status=EC.Status.IN_VALIDATION)
+        client.force_login(UserFactory(role=User.Role.DES_TEAM))
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 404
+
+    def test_des_team_can_open_a_closed_ec(self, client):
+        ec = ECFactory(status=EC.Status.CLOSED)
+        client.force_login(UserFactory(role=User.Role.DES_TEAM))
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+
+    def test_administrator_can_open_any_ec(self, client):
+        ec = ECFactory()
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+
 
 class TestECDetailTimelineEdits:
     """EC_TIMELINE_EDITS.md: auditlog edits surface on the Histórico timeline."""
@@ -1215,11 +1266,11 @@ class TestECEditView:
         assert reverse("backlog:ec_edit", args=[ec.pk]) in owner_html
         assert "Editar" in owner_html
 
+        # Issue #93: another requester must not even reach the page (404),
+        # so the can_edit branch is unreachable for non-owners.
         client.force_login(UserFactory(role=User.Role.REQUESTER))
         other = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
-        assert other.status_code == 200
-        assert other.context["can_edit"] is False
-        assert "Editar" not in other.content.decode()
+        assert other.status_code == 404
 
     def test_owner_changes_the_responsible_cd(self, client):
         requester = UserFactory(role=User.Role.REQUESTER)
