@@ -11,6 +11,7 @@ Spec: `.opencode/specs/EC_DETAIL_VIEW.md` (tests 12–14).
 import pytest
 from django.urls import reverse
 
+from apps.backlog.models import EC
 from apps.backlog.tests.factories import ECFactory
 from apps.workflow.models import Review
 from apps.workflow.tests.factories import ReviewFactory
@@ -65,6 +66,25 @@ class TestECDetailDecisionEvents:
         client.force_login(ec.requester)
         version = _upload(ec, "v1.0")
         ReviewFactory(document_version=version, decision=Review.Decision.APPROVED)
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+        timeline = response.context["timeline"]
+
+        assert [event["title"] for event in timeline] == [
+            "EC criada",
+            "Documento v1.0 carregado",
+            "Decisão do CD: Aprovado",
+        ]
+
+    def test_decision_flow_gains_no_edit_event(self, client):
+        """EC_TIMELINE_EDITS.md guard: the approval's status-only UPDATE entry
+        must not surface as a second "EC editada" event."""
+        ec = ECFactory()
+        client.force_login(ec.requester)
+        version = _upload(ec, "v1.0")
+        ReviewFactory(document_version=version, decision=Review.Decision.APPROVED)
+        ec.status = EC.Status.APPROVED
+        ec.save(update_fields=["status"])
 
         response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
         timeline = response.context["timeline"]
