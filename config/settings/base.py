@@ -130,6 +130,16 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Display dates consistently as DD-Mon-YYYY (e.g. 05-Jan-2026) everywhere
+# the UI shows a date, including Django admin list/detail views.
+DATE_FORMAT = "d-M-Y"
+DATETIME_FORMAT = "d-M-Y H:i"
+SHORT_DATE_FORMAT = "d-M-Y"
+SHORT_DATETIME_FORMAT = "d-M-Y H:i"
+FIRST_DAY_OF_WEEK = 1
+MONTH_FORMAT = "M"
+DAY_FORMAT = "d"
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/

@@ -54,6 +54,24 @@ class TestDocumentVersionsAccess:
         assert response.status_code == 200
         assert "Ver EC completa" in response.content.decode()
 
+    def test_gallery_uploaded_at_uses_dd_mon_yyyy(self, client):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        admin = UserFactory(role=User.Role.ADMINISTRATOR)
+        ec = ECFactory(release=None)
+        version = add_version(ec, "v1.0")
+        type(version).objects.filter(pk=version.pk).update(
+            uploaded_at=datetime(2026, 5, 9, 11, 20, tzinfo=ZoneInfo("Asia/Dili"))
+        )
+        client.force_login(admin)
+
+        html = client.get(gallery_url(ec)).content.decode()
+
+        assert "09-May-2026 11:20" in html
+        assert "09/05/2026" not in html
+        assert "2026-05-09" not in html
+
     @pytest.mark.parametrize("role", ["requester", "cd", "des_team"])
     @pytest.mark.parametrize("page", ["list", "gallery"])
     def test_non_administrators_get_forbidden(self, client, role, page):
