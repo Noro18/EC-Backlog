@@ -17,4 +17,4 @@ class ReviewAdmin(admin.ModelAdmin):
     readonly_fields = ["decided_at", "created_at", "updated_at"]
 
 
-auditlog.register(Review)
+auditlog.register(Review, exclude_fields=["created_at", "updated_at"])

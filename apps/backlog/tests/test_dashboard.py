@@ -89,7 +89,7 @@ class TestAdminDashboard:
         assert "Ver todos os logs" in html
         assert "Pesquisar nome..." not in html
         # The feed is rendered by django-tables2 (`ActivityTable`), not a <ul>.
-        assert "Hora" in html
+        assert "Data / Hora" in html
         assert f"criou o EC-{ec}" in html
 
     def test_non_admin_does_not_see_the_admin_panel(self, client):
@@ -140,7 +140,7 @@ class TestAdminDashboard:
         assert data["recent_logs"]
         entry = data["recent_logs"][0]
         assert f"criou o EC-{ec}" in entry["description"]
-        assert len(entry["time"]) == 5  # "HH:MM"
+        assert len(entry["time"]) >= 16  # "DD-Mon-YYYY HH:MM"
 
     def test_an_upload_reads_as_one_portuguese_sentence(self):
         admin = UserFactory(role=User.Role.ADMINISTRATOR, name="Maria da Costa")
@@ -228,8 +228,8 @@ class TestDashboardStats:
         months = dashboard_stats(user)["ec_by_month"]
 
         assert months == [
-            {"month": "2026-08", "count": 2},
-            {"month": "2026-09", "count": 1},
+            {"month": "Aug-2026", "count": 2},
+            {"month": "Sep-2026", "count": 1},
         ]
 
     def test_requester_only_counts_their_own_ecs(self):

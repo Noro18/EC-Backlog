@@ -18,4 +18,4 @@ class DocumentVersionAdmin(admin.ModelAdmin):
     readonly_fields = ["uploaded_at", "created_at", "updated_at"]
 
 
-auditlog.register(DocumentVersion)
+auditlog.register(DocumentVersion, exclude_fields=["created_at", "updated_at"])

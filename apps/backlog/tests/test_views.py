@@ -4,7 +4,7 @@ Read `tests/test_models.py` first: same module-level `pytestmark`, same
 `class Test...:` grouping style.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -339,7 +339,7 @@ class TestReleaseDetail:
         )
         html = client.get(reverse("backlog:release_detail", args=[release.pk])).content.decode()
 
-        assert "05/10/2026 09:30" in html
+        assert "05-Oct-2026 09:30" in html
         assert "Não definido" not in html
         assert "—" in html
 
@@ -898,7 +898,17 @@ class TestECDetail:
         client.force_login(ec.requester)
         html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
 
-        assert "Criada em 05/10/2026 às 09:30" in html
+        assert "Criada em 05-Oct-2026 às 09:30" in html
+
+    def test_ec_list_shows_creation_date_in_dd_mon_yyyy(self, client):
+        ec = ECFactory(creation_date=date(2026, 1, 23))
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+        html = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert f"EC-{ec.ec_code}" in html
+        assert "23-Jan-2026" in html
+        assert "23/01/2026" not in html
+        assert "2026-01-23" not in html
 
     def test_query_count_does_not_grow_with_versions(self, client):
         ec = ECFactory()

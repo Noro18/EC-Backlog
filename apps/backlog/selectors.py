@@ -77,7 +77,7 @@ def dashboard_stats(user) -> dict:
         "releases": releases,
         "releases_open": release_qs.filter(is_open=True).count(),
         "ec_by_month": [
-            {"month": row["month"].strftime("%Y-%m"), "count": row["n"]} for row in monthly_rows
+            {"month": row["month"].strftime("%b-%Y"), "count": row["n"]} for row in monthly_rows
         ],
     }
 
@@ -308,7 +308,7 @@ def cd_dashboard(user) -> dict:
 
     # 2. Monthly creation for line/bar chart
     ec_by_month = [
-        {"month": row["month"].strftime("%Y-%m"), "count": row["n"]}
+        {"month": row["month"].strftime("%b-%Y"), "count": row["n"]}
         for row in ec_qs.exclude(creation_date=None)
             .annotate(month=TruncMonth("creation_date"))
             .values("month")
@@ -516,7 +516,7 @@ def _log_activity(entry: LogEntry) -> dict:
         if model == "ec" and new_status:
             description += f" → {EC_STATUS_PT.get(new_status, new_status)}"
     return {
-        "time": timezone.localtime(entry.timestamp).strftime("%H:%M"),
+        "time": timezone.localtime(entry.timestamp).strftime("%d-%b-%Y %H:%M"),
         "description": description,
     }
 
@@ -592,7 +592,7 @@ def full_audit_log_entries():
                 )
 
         results.append({
-            "timestamp": timezone.localtime(entry.timestamp).strftime("%d/%m/%Y %H:%M"),
+            "timestamp": timezone.localtime(entry.timestamp).strftime("%d-%b-%Y %H:%M"),
             "actor": user_str,
             "action": entry.get_action_display(),
             "object": object_label,

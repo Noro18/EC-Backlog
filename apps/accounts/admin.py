@@ -32,4 +32,5 @@ list_filter = ("role", "is_staff", "is_active")
 
 # RNF02: user creations/edits must show up in the audit feed that feeds the
 # administrator dashboard's "Ações hoje" and "Atividade recente" widgets.
-auditlog.register(User)
+# Exclude last_login and password to avoid noise (login updates, hash changes).
+auditlog.register(User, exclude_fields=["last_login", "password"])
