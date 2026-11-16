@@ -90,7 +90,7 @@ class ECListView(LoginRequiredMixin, SingleTableView):
             status=params.get("status"),
         ).prefetch_related("versions")
 
-class ReleaseListView(SingleTableView):
+class ReleaseListView(LoginRequiredMixin, SingleTableView):
     model = Release
     table_class = ReleaseTable
     template_name = "backlog/release_list.html"
@@ -202,7 +202,7 @@ class ECUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         return reverse_lazy("backlog:ec_detail", kwargs={"pk": self.object.pk})
 
 
-class ReleaseDetailView(DetailView):
+class ReleaseDetailView(LoginRequiredMixin, DetailView):
     model = Release
     template_name = "backlog/release_detail.html"
     # iha template it aatu access oinsa uza context_object_name

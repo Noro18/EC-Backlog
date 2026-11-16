@@ -34,6 +34,19 @@ def docx_file(name="spec.docx"):
 
 
 class TestReleaseList:
+    @pytest.fixture(autouse=True)
+    def _login(self, client):
+        """Every release-list test runs as a signed-in administrator."""
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+
+    def test_anonymous_users_are_redirected_to_login(self):
+        from django.test import Client
+
+        response = Client().get(reverse("backlog:release_list"))
+
+        assert response.status_code == 302
+        assert reverse("accounts:login") in response.url
+
     def test_returns_200(self, client):
         response = client.get(reverse("backlog:release_list"))
         assert response.status_code == 200
@@ -280,6 +293,20 @@ class TestECListSearch:
 
 
 class TestReleaseDetail:
+    @pytest.fixture(autouse=True)
+    def _login(self, client):
+        """Every release-detail test runs as a signed-in administrator."""
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+
+    def test_anonymous_users_are_redirected_to_login(self):
+        from django.test import Client
+
+        release = ReleaseFactory()
+        response = Client().get(reverse("backlog:release_detail", args=[release.pk]))
+
+        assert response.status_code == 302
+        assert reverse("accounts:login") in response.url
+
     def test_returns_200_and_release_in_context(self, client):
         release = ReleaseFactory(year=2027, number_sequence=42)
         response = client.get(reverse("backlog:release_detail", args=[release.pk]))
