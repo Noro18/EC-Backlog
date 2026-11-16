@@ -39,6 +39,7 @@ def releases_for_edit(current):
         .order_by("-year", "-number_sequence")
     )
 
+
 def ec_for_edit(current):
     pass
 
@@ -200,18 +201,20 @@ def requester_dashboard(user) -> dict:
 
         if st in by_status:
             by_status[st] += 1
-        
+
         version_list = [row["versions__version_number"] for row in versions]
         latest_comment = latest["versions__review__comment"] if versions else ""
 
-        my_ecs.append({         
-            "id": ec_id,
-            "reference": data["reference"],
-            "status": st,
-            "versions_count": len(versions),
-            "versions": version_list,
-            "latest_comment": latest_comment,
-        })
+        my_ecs.append(
+            {
+                "id": ec_id,
+                "reference": data["reference"],
+                "status": st,
+                "versions_count": len(versions),
+                "versions": version_list,
+                "latest_comment": latest_comment,
+            }
+        )
 
     return {
         "my_ecs": my_ecs,
@@ -257,12 +260,40 @@ def _display_name(user):
     return user.full_name or user.username
 
 
-def build_ec_timeline(ec) -> list[dict]:
-    """Events (creation, version uploads, CD decisions) for one EC, oldest first.
+_EDIT_FIELD_PHRASES_PT = {
+    "description": "Descrição alterada",
+    "release_id": "Release alterada",
+    "responsible_cd_id": "CD responsável alterado",
+}
 
-    Derived from the models only — EC_DETAIL Decision 3. Reviews are reached
-    through `version.review` (reverse one-to-one): `backlog` must not import
-    `workflow` (ARCHITECTURE §5).
+
+def _edit_note(changes: dict) -> str | None:
+    """Readable PT summary of one EC edit (EC_TIMELINE_EDITS.md Decisions 3-5).
+
+    `status` never appears here — status transitions are rendered as
+    "Decisão do CD" events, and a status-only save produces no edit event.
+    """
+    parts = []
+    for field, pair in changes.items():
+        if field == "status":
+            continue
+        old, new = pair if isinstance(pair, (list, tuple)) and len(pair) == 2 else (None, None)
+        if old == new:
+            continue
+        if field == "reference":
+            parts.append(f'Referência: "{new}"')
+        else:
+            parts.append(_EDIT_FIELD_PHRASES_PT.get(field, f"{field} alterado"))
+    return "; ".join(parts) or None
+
+
+def build_ec_timeline(ec) -> list[dict]:
+    """Events (creation, version uploads, CD decisions, edits) for one EC, oldest first.
+
+    Derived from the models plus the EC's auditlog UPDATE entries
+    (EC_TIMELINE_EDITS.md). Reviews are reached through `version.review`
+    (reverse one-to-one): `backlog` must not import `workflow`
+    (ARCHITECTURE §5).
     """
     events = [
         {
@@ -294,6 +325,23 @@ def build_ec_timeline(ec) -> list[dict]:
                 "note": review.comment or None,
             }
         )
+    edits = (
+        LogEntry.objects.get_for_object(ec)
+        .filter(action=LogEntry.Action.UPDATE)
+        .select_related("actor")
+    )
+    for entry in edits:
+        note = _edit_note(entry.changes if isinstance(entry.changes, dict) else {})
+        if note is None:
+            continue  # status-only save (workflow transition) — Decision 3
+        events.append(
+            {
+                "title": "EC editada",
+                "who": _display_name(entry.actor),
+                "when": entry.timestamp,
+                "note": note,
+            }
+        )
     events.sort(key=lambda event: event["when"])
     return events
 
@@ -303,17 +351,23 @@ def cd_dashboard(user) -> dict:
     ec_qs = EC.objects.filter(responsible_cd=user).exclude(status=EC.Status.CANCELLED)
 
     # 1. Status breakdown for doughnut chart
-    status_counts = {row["status"]: row["n"] for row in ec_qs.values("status").annotate(n=Count("id"))}
-    by_status = {value: status_counts.get(value, 0) for value, _label in EC.Status.choices if value != EC.Status.CANCELLED}
+    status_counts = {
+        row["status"]: row["n"] for row in ec_qs.values("status").annotate(n=Count("id"))
+    }
+    by_status = {
+        value: status_counts.get(value, 0)
+        for value, _label in EC.Status.choices
+        if value != EC.Status.CANCELLED
+    }
 
     # 2. Monthly creation for line/bar chart
     ec_by_month = [
         {"month": row["month"].strftime("%b-%Y"), "count": row["n"]}
         for row in ec_qs.exclude(creation_date=None)
-            .annotate(month=TruncMonth("creation_date"))
-            .values("month")
-            .annotate(n=Count("id"))
-            .order_by("month")
+        .annotate(month=TruncMonth("creation_date"))
+        .values("month")
+        .annotate(n=Count("id"))
+        .order_by("month")
     ]
 
     # 3. Queues (Pending review & Rejected by me)
@@ -325,31 +379,37 @@ def cd_dashboard(user) -> dict:
         latest = ec.versions.order_by("-id").first()
         if not latest:
             continue
-        
+
         review = getattr(latest, "review", None)
         if review is None:
-            pending_review.append({
-                "id": ec.id,
-                "reference": ec.reference,
-                "version": latest.version_number,
-                "uploaded_at": latest.uploaded_at,
-            })
+            pending_review.append(
+                {
+                    "id": ec.id,
+                    "reference": ec.reference,
+                    "version": latest.version_number,
+                    "uploaded_at": latest.uploaded_at,
+                }
+            )
         elif review.decision == "approved" and review.cd_id == user.id:
-            approved_by_me.append({
-                "id": ec.id,
-                "reference": ec.reference,
-                "version": latest.version_number,
-                "comment": review.comment,
-                "decided_at": review.decided_at,
-        })
+            approved_by_me.append(
+                {
+                    "id": ec.id,
+                    "reference": ec.reference,
+                    "version": latest.version_number,
+                    "comment": review.comment,
+                    "decided_at": review.decided_at,
+                }
+            )
         elif review.decision == "rejected" and review.cd_id == user.id:
-            rejected_by_me.append({
-                "id": ec.id,
-                "reference": ec.reference,
-                "version": latest.version_number,
-                "comment": review.comment,
-                "decided_at": review.decided_at,
-            })
+            rejected_by_me.append(
+                {
+                    "id": ec.id,
+                    "reference": ec.reference,
+                    "version": latest.version_number,
+                    "comment": review.comment,
+                    "decided_at": review.decided_at,
+                }
+            )
 
     return {
         "assigned_total": ec_qs.count(),
@@ -361,6 +421,7 @@ def cd_dashboard(user) -> dict:
         "ec_by_status": by_status,
         "ec_by_month": ec_by_month,
     }
+
 
 def pending_ecs(user):
     """Return pending validation rows visible to this CD or Administrator."""
@@ -377,9 +438,7 @@ def pending_ecs(user):
     else:
         return []
 
-    ec_qs = ec_qs.select_related("requester", "responsible_cd").prefetch_related(
-        "versions__review"
-    )
+    ec_qs = ec_qs.select_related("requester", "responsible_cd").prefetch_related("versions__review")
 
     rows = []
     for ec in ec_qs:
@@ -398,14 +457,8 @@ def pending_ecs(user):
                 "id": ec.id,
                 "ec_code": ec.ec_code,
                 "reference": ec.reference,
-                "requester": (
-                    requester.full_name or requester.username
-                    if requester
-                    else "—"
-                ),
-                "responsible_cd": (
-                    ec.responsible_cd.full_name or ec.responsible_cd.username
-                ),
+                "requester": (requester.full_name or requester.username if requester else "—"),
+                "responsible_cd": (ec.responsible_cd.full_name or ec.responsible_cd.username),
                 "version": latest.version_number,
                 "uploaded_at": latest.uploaded_at,
                 "_sort_key": (
@@ -421,7 +474,6 @@ def pending_ecs(user):
         del row["_sort_key"]
 
     return rows
-
 
 
 def des_team_dashboard(user) -> dict:
@@ -490,13 +542,11 @@ def _log_activity(entry: LogEntry) -> dict:
         _old, decision = _changed(changes, "decision")
         _old_comment, comment = _changed(changes, "comment")
         if decision == "approved":
-
             description = f"{actor_name} aprovou o {target}"
         elif decision == "rejected":
-
             suffix = " com comentário" if comment else ""
             description = f"{actor_name} rejeitou o {target}{suffix}"
-            
+
         else:
             description = f"{actor_name} avaliou o {target}"
     else:
@@ -521,7 +571,6 @@ def _log_activity(entry: LogEntry) -> dict:
     }
 
 
-
 def admin_dashboard(user) -> dict:
     """Administrator dashboard: global counts + the recent activity feed.
 
@@ -529,9 +578,8 @@ def admin_dashboard(user) -> dict:
     """
     today = timezone.localdate()
     ec_qs = EC.objects.all()
-    log_qs = (
-        LogEntry.objects.select_related("actor", "content_type")
-        .filter(content_type__model__in=["ec", "release", "review", "documentversion"])
+    log_qs = LogEntry.objects.select_related("actor", "content_type").filter(
+        content_type__model__in=["ec", "release", "review", "documentversion"]
     )
 
     return {
@@ -544,9 +592,7 @@ def admin_dashboard(user) -> dict:
         "ec_pending_review": ec_qs.filter(status=EC.Status.IN_VALIDATION).count(),
         "actions_today": log_qs.filter(timestamp__date=today).count(),
         # "Atividade recente" panel
-        "recent_logs": [
-            _log_activity(entry) for entry in log_qs.order_by("-timestamp")[:5]
-        ],
+        "recent_logs": [_log_activity(entry) for entry in log_qs.order_by("-timestamp")[:5]],
     }
 
 
@@ -561,7 +607,9 @@ def full_audit_log_entries():
     for entry in log_qs:
         actor = entry.actor
         actor_name = (actor.full_name or actor.username) if actor else "Sistema"
-        actor_role = actor.get_role_display() if actor and hasattr(actor, "get_role_display") else ""
+        actor_role = (
+            actor.get_role_display() if actor and hasattr(actor, "get_role_display") else ""
+        )
         user_str = f"{actor_name} ({actor_role})" if actor_role else actor_name
 
         changes = entry.changes if isinstance(entry.changes, dict) else {}
@@ -584,18 +632,19 @@ def full_audit_log_entries():
 
         if model in {"ec", "documentversion", "review"}:
             match = _EC_CODE_RE.search(object_label)
-            if match and not object_label[:match.start()].endswith("EC-"):
+            if match and not object_label[: match.start()].endswith("EC-"):
                 code = match.group()
                 object_label = (
-                    f"{object_label[:match.start()]}EC-{code}"
-                    f"{object_label[match.end():]}"
+                    f"{object_label[: match.start()]}EC-{code}{object_label[match.end() :]}"
                 )
 
-        results.append({
-            "timestamp": timezone.localtime(entry.timestamp).strftime("%d-%b-%Y %H:%M"),
-            "actor": user_str,
-            "action": entry.get_action_display(),
-            "object": object_label,
-            "details": " | ".join(details_parts),
-        })
+        results.append(
+            {
+                "timestamp": timezone.localtime(entry.timestamp).strftime("%d-%b-%Y %H:%M"),
+                "actor": user_str,
+                "action": entry.get_action_display(),
+                "object": object_label,
+                "details": " | ".join(details_parts),
+            }
+        )
     return results

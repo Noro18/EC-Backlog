@@ -930,6 +930,97 @@ class TestECDetail:
         assert len(large) == len(small)
 
 
+class TestECDetailTimelineEdits:
+    """EC_TIMELINE_EDITS.md: auditlog edits surface on the Histórico timeline."""
+
+    def _edit(self, client, ec, **overrides):
+        client.force_login(ec.requester)
+        data = {
+            "reference": ec.reference,
+            "description": ec.description,
+            "release": ec.release.pk,
+            "responsible_cd": ec.responsible_cd_id or UserFactory(role=User.Role.CD).pk,
+        }
+        data.update(overrides)
+        return client.post(reverse("backlog:ec_edit", args=[ec.pk]), data=data)
+
+    def test_edited_ec_shows_the_edit_event(self, client):
+        ec = ECFactory(
+            status=EC.Status.IN_VALIDATION,
+            responsible_cd=UserFactory(role=User.Role.CD),
+        )
+        post = self._edit(client, ec, reference="CR2026555")
+
+        assert post.status_code == 302, getattr(post, "context", None)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+        timeline = response.context["timeline"]
+
+        event = timeline[-1]
+        assert event["title"] == "EC editada"
+        assert event["who"] == ec.requester.full_name
+        assert event["note"] == 'Referência: "CR2026555"'
+        assert "EC editada" in response.content.decode()
+
+    def test_unedited_ec_has_no_edit_event(self, client):
+        ec = ECFactory()
+        client.force_login(ec.requester)
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+        timeline = response.context["timeline"]
+
+        assert "EC editada" not in [event["title"] for event in timeline]
+
+    def test_edit_sorts_chronologically(self, client):
+        ec = ECFactory(
+            status=EC.Status.IN_VALIDATION,
+            responsible_cd=UserFactory(role=User.Role.CD),
+        )
+        _upload(ec, "v1.0")
+        self._edit(client, ec, reference="CR2026555")
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+        timeline = response.context["timeline"]
+
+        assert [event["title"] for event in timeline] == [
+            "EC criada",
+            "Documento v1.0 carregado",
+            "EC editada",
+        ]
+
+    def test_multi_field_edit_note_lists_the_changed_fields(self, client):
+        ec = ECFactory(
+            status=EC.Status.IN_VALIDATION,
+            responsible_cd=UserFactory(role=User.Role.CD),
+        )
+        self._edit(client, ec, reference="CR2026555", description="Texto revisto")
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+        event = response.context["timeline"][-1]
+
+        assert 'Referência: "CR2026555"' in event["note"]
+        assert "Descrição alterada" in event["note"]
+        assert "Release" not in event["note"]
+        assert "CD responsável" not in event["note"]
+        assert "status" not in event["note"]
+
+    def test_status_only_save_is_not_an_edit_event(self, client):
+        ec = ECFactory()
+        ec.status = EC.Status.APPROVED
+        ec.save(update_fields=["status"])
+
+        client.force_login(ec.requester)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+        timeline = response.context["timeline"]
+
+        assert "EC editada" not in [event["title"] for event in timeline]
+
+
 class TestECEditView:
     """EC_EDIT.md (issue #67): edit the content of an in-flight EC."""
 
@@ -1004,9 +1095,7 @@ class TestECEditView:
         ec = ECFactory(status=EC.Status.IN_VALIDATION)
         client.force_login(UserFactory(role=User.Role.CD))
 
-        response = client.post(
-            reverse("backlog:ec_edit", args=[ec.pk]), data=self._data(ec)
-        )
+        response = client.post(reverse("backlog:ec_edit", args=[ec.pk]), data=self._data(ec))
 
         assert response.status_code == 403
 
@@ -1108,9 +1197,7 @@ class TestECEditView:
         requester = UserFactory(role=User.Role.REQUESTER)
         old_cd = UserFactory(role=User.Role.CD)
         new_cd = UserFactory(role=User.Role.CD)
-        ec = ECFactory(
-            requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION
-        )
+        ec = ECFactory(requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION)
         client.force_login(requester)
 
         response = client.post(
