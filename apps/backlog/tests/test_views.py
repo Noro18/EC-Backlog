@@ -888,6 +888,16 @@ class TestECDetail:
         assert "v1.0" in html
         assert "enviado por" in html
 
+    def test_document_list_is_oldest_first(self, client):
+        """The Documentos card lists versions v1.0 → v1.1 (ascending)."""
+        ec = ECFactory()
+        _upload(ec, "v1.0")
+        _upload(ec, "v1.1")
+        client.force_login(ec.requester)
+        html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
+
+        assert html.index("v1.0") < html.index("v1.1")
+
     def test_preview_label_names_the_previewed_version(self, client):
         """The heading states which version the iframe shows — no ambiguity."""
         ec = ECFactory()

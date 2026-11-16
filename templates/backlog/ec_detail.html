@@ -142,7 +142,7 @@
         <div class="card mt-3">
             <div class="card-header bg-body fw-semibold">Documentos</div>
             <div class="card-body">
-                {% for version in ec.versions.all %}
+                {% for version in ec.versions.all reversed %}
                     <div class="d-flex justify-content-between align-items-start py-2 {% if not forloop.last %}border-bottom{% endif %}">
                         <div>
                             <span class="fw-semibold">{{ version.version_number }}</span>
