@@ -143,8 +143,7 @@ class ECDetailView(LoginRequiredMixin, DetailView):
 
     def get_queryset(self):
         return (
-            super()
-            .get_queryset()
+            visible_ecs(self.request.user)
             .select_related("requester", "responsible_cd", "release")
             .prefetch_related("versions__uploaded_by", "versions__review")
         )

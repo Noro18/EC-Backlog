@@ -2,6 +2,7 @@ from io import BytesIO
 from pathlib import Path
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import PermissionDenied
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -10,6 +11,7 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.generic import TemplateView
 
 from apps.accounts.models import User
+from apps.backlog.selectors import visible_ecs
 
 from .models import DocumentVersion
 from .selectors import ec_versions, version_ecs
@@ -23,12 +25,24 @@ def _get_document_file(pk):
     return version
 
 
+def _check_access(request, version):
+    """Only users who may see the owning EC may see its files (ARCHITECTURE §6).
+
+    Without this check any authenticated user could download every document by
+    enumerating the sequential pk — see issue #93 (IDOR in ECDetailView); the
+    document views had the same missing selector.
+    """
+    if not visible_ecs(request.user).filter(pk=version.ec_id).exists():
+        raise PermissionDenied
+
+
 @method_decorator(xframe_options_sameorigin, name="dispatch")
 class DocumentPreviewView(LoginRequiredMixin, View):
     """Serve a PDF preview, converting DOCX temporarily when needed."""
 
     def get(self, request, pk):
         version = _get_document_file(pk)
+        _check_access(request, version)
         filename = Path(version.file.name).name
         suffix = Path(filename).suffix.lower()
 
@@ -69,6 +83,7 @@ class DocumentDownloadView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         version = _get_document_file(pk)
+        _check_access(request, version)
         return FileResponse(
             version.file.open("rb"),
             as_attachment=True,
