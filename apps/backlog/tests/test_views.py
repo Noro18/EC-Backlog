@@ -888,6 +888,17 @@ class TestECDetail:
         assert "v1.0" in html
         assert "enviado por" in html
 
+    def test_preview_label_names_the_previewed_version(self, client):
+        """The heading states which version the iframe shows — no ambiguity."""
+        ec = ECFactory()
+        _upload(ec, "v1.0")
+        _upload(ec, "v1.1")
+        client.force_login(ec.requester)
+        html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
+
+        assert "Pré-visualização da versão v1.1" in html
+        assert "da versão mais recente" not in html
+
     def test_timeline_creation_event_first(self, client):
         ec = ECFactory()
         client.force_login(ec.requester)
