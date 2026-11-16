@@ -64,7 +64,7 @@ class EC(TimeStampedModel):
     year = models.PositiveSmallIntegerField()
     number_sequence = models.PositiveIntegerField()
     reference = models.CharField(max_length=50)
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
     requester = models.ForeignKey(
         "accounts.User",
         on_delete=models.PROTECT,
