@@ -64,6 +64,22 @@ class TestUserList:
         assert "—" in html
         assert "nuncaentrou" in html
 
+    def test_last_login_uses_dd_mon_yyyy(self, client):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        client.force_login(UserFactory(role="administrator"))
+        UserFactory(
+            username="jaentrou",
+            last_login=datetime(2026, 3, 7, 14, 5, tzinfo=ZoneInfo("Asia/Dili")),
+        )
+
+        html = client.get(reverse("accounts:user_list")).content.decode()
+
+        assert "07-Mar-2026 14:05" in html
+        assert "07/03/2026" not in html
+        assert "2026-03-07" not in html
+
     def test_each_role_maps_to_its_badge(self, client):
         client.force_login(UserFactory(role="administrator"))
         for role in ROLE_BADGE_CLASSES:

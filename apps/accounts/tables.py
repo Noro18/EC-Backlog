@@ -1,6 +1,7 @@
 import django_tables2 as tables
 from django.middleware.csrf import get_token
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 
 from .models import User
@@ -38,7 +39,7 @@ class UserTable(tables.Table):
     def render_last_login(self, record):
         if record.last_login is None:
             return format_html('<span class="{}">—</span>', "text-bg-tertiary")
-        return record.last_login.strftime("%d/%m/%Y %H:%M")
+        return timezone.localtime(record.last_login).strftime("%d-%b-%Y %H:%M")
 
     def render_edit(self, record):
         edit_url = reverse("accounts:user_update", args=[record.pk])

@@ -144,3 +144,21 @@ class TestPendingECList:
         table = response.context["table"]
         assert table.page.paginator.count == 26
         assert len(table.page.object_list) == 25
+
+    def test_uploaded_at_uses_dd_mon_yyyy(self, client):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        cd = UserFactory(role=User.Role.CD)
+        requester = UserFactory(role=User.Role.REQUESTER)
+        _ec, document = make_pending_ec(cd=cd, requester=requester, number=31)
+        type(document).objects.filter(pk=document.pk).update(
+            uploaded_at=datetime(2026, 2, 14, 16, 45, tzinfo=ZoneInfo("Asia/Dili"))
+        )
+
+        client.force_login(cd)
+        html = client.get(reverse("backlog:pending_ecs")).content.decode()
+
+        assert "14-Feb-2026 16:45" in html
+        assert "14/02/2026" not in html
+        assert "2026-02-14" not in html

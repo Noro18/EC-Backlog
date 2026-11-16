@@ -8,7 +8,7 @@
     <div>
         <h3 class="mb-1">EC-{{ ec.ec_code }}</h3>
         <p class="text-muted mb-0">
-            Criada em {{ ec.created_at|date:"d/m/Y" }} às {{ ec.created_at|date:"H:i" }}
+            Criada em {{ ec.created_at|date:"d-M-Y" }} às {{ ec.created_at|date:"H:i" }}
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
@@ -148,7 +148,7 @@
                             <span class="fw-semibold">{{ version.version_number }}</span>
                             <span class="text-muted small">
                                 enviado por {{ version.uploaded_by.full_name|default:version.uploaded_by.username }}
-                                em {{ version.uploaded_at|date:"d/m/Y H:i" }}
+                                em {{ version.uploaded_at|date:"d-M-Y H:i" }}
                             </span>
                             {% if version.change_reason %}
                                 <p class="mb-0 small text-muted">{{ version.change_reason }}</p>
@@ -199,7 +199,7 @@
                             <p class="mb-0 fw-semibold">{{ event.title }}</p>
                             <p class="mb-0 text-muted small">
                                 {% if event.who %}{{ event.who }}{% if event.when %} · {% endif %}{% endif %}
-                                {{ event.when|date:"d/m/Y H:i" }}
+                                {{ event.when|date:"d-M-Y H:i" }}
                             </p>
                             {% if event.note %}
                                 <p class="mb-0 mt-2 p-2 bg-body-secondary border rounded small">{{ event.note }}</p>

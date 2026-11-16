@@ -4,7 +4,7 @@ Read `tests/test_models.py` first: same module-level `pytestmark`, same
 `class Test...:` grouping style.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -367,7 +367,7 @@ class TestReleaseDetail:
         )
         html = client.get(reverse("backlog:release_detail", args=[release.pk])).content.decode()
 
-        assert "05/10/2026 09:30" in html
+        assert "05-Oct-2026 09:30" in html
         assert "Não definido" not in html
         assert "—" in html
 
@@ -926,7 +926,17 @@ class TestECDetail:
         client.force_login(ec.requester)
         html = client.get(reverse("backlog:ec_detail", args=[ec.pk])).content.decode()
 
-        assert "Criada em 05/10/2026 às 09:30" in html
+        assert "Criada em 05-Oct-2026 às 09:30" in html
+
+    def test_ec_list_shows_creation_date_in_dd_mon_yyyy(self, client):
+        ec = ECFactory(creation_date=date(2026, 1, 23))
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+        html = client.get(reverse("backlog:ec_list")).content.decode()
+
+        assert f"EC-{ec.ec_code}" in html
+        assert "23-Jan-2026" in html
+        assert "23/01/2026" not in html
+        assert "2026-01-23" not in html
 
     def test_query_count_does_not_grow_with_versions(self, client):
         ec = ECFactory()
@@ -946,6 +956,97 @@ class TestECDetail:
         assert first.context["ec"] == ec
         assert second.context["ec"] == ec
         assert len(large) == len(small)
+
+
+class TestECDetailTimelineEdits:
+    """EC_TIMELINE_EDITS.md: auditlog edits surface on the Histórico timeline."""
+
+    def _edit(self, client, ec, **overrides):
+        client.force_login(ec.requester)
+        data = {
+            "reference": ec.reference,
+            "description": ec.description,
+            "release": ec.release.pk,
+            "responsible_cd": ec.responsible_cd_id or UserFactory(role=User.Role.CD).pk,
+        }
+        data.update(overrides)
+        return client.post(reverse("backlog:ec_edit", args=[ec.pk]), data=data)
+
+    def test_edited_ec_shows_the_edit_event(self, client):
+        ec = ECFactory(
+            status=EC.Status.IN_VALIDATION,
+            responsible_cd=UserFactory(role=User.Role.CD),
+        )
+        post = self._edit(client, ec, reference="CR2026555")
+
+        assert post.status_code == 302, getattr(post, "context", None)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+        timeline = response.context["timeline"]
+
+        event = timeline[-1]
+        assert event["title"] == "EC editada"
+        assert event["who"] == ec.requester.full_name
+        assert event["note"] == 'Referência: "CR2026555"'
+        assert "EC editada" in response.content.decode()
+
+    def test_unedited_ec_has_no_edit_event(self, client):
+        ec = ECFactory()
+        client.force_login(ec.requester)
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+        timeline = response.context["timeline"]
+
+        assert "EC editada" not in [event["title"] for event in timeline]
+
+    def test_edit_sorts_chronologically(self, client):
+        ec = ECFactory(
+            status=EC.Status.IN_VALIDATION,
+            responsible_cd=UserFactory(role=User.Role.CD),
+        )
+        _upload(ec, "v1.0")
+        self._edit(client, ec, reference="CR2026555")
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+
+        assert response.status_code == 200
+        timeline = response.context["timeline"]
+
+        assert [event["title"] for event in timeline] == [
+            "EC criada",
+            "Documento v1.0 carregado",
+            "EC editada",
+        ]
+
+    def test_multi_field_edit_note_lists_the_changed_fields(self, client):
+        ec = ECFactory(
+            status=EC.Status.IN_VALIDATION,
+            responsible_cd=UserFactory(role=User.Role.CD),
+        )
+        self._edit(client, ec, reference="CR2026555", description="Texto revisto")
+
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+        event = response.context["timeline"][-1]
+
+        assert 'Referência: "CR2026555"' in event["note"]
+        assert "Descrição alterada" in event["note"]
+        assert "Release" not in event["note"]
+        assert "CD responsável" not in event["note"]
+        assert "status" not in event["note"]
+
+    def test_status_only_save_is_not_an_edit_event(self, client):
+        ec = ECFactory()
+        ec.status = EC.Status.APPROVED
+        ec.save(update_fields=["status"])
+
+        client.force_login(ec.requester)
+        response = client.get(reverse("backlog:ec_detail", args=[ec.pk]))
+        timeline = response.context["timeline"]
+
+        assert "EC editada" not in [event["title"] for event in timeline]
 
 
 class TestECEditView:
@@ -1022,9 +1123,7 @@ class TestECEditView:
         ec = ECFactory(status=EC.Status.IN_VALIDATION)
         client.force_login(UserFactory(role=User.Role.CD))
 
-        response = client.post(
-            reverse("backlog:ec_edit", args=[ec.pk]), data=self._data(ec)
-        )
+        response = client.post(reverse("backlog:ec_edit", args=[ec.pk]), data=self._data(ec))
 
         assert response.status_code == 403
 
@@ -1126,9 +1225,7 @@ class TestECEditView:
         requester = UserFactory(role=User.Role.REQUESTER)
         old_cd = UserFactory(role=User.Role.CD)
         new_cd = UserFactory(role=User.Role.CD)
-        ec = ECFactory(
-            requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION
-        )
+        ec = ECFactory(requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION)
         client.force_login(requester)
 
         response = client.post(

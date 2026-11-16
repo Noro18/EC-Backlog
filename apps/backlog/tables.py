@@ -79,8 +79,9 @@ class ECTable(tables.Table):
     release = tables.Column(attrs={"td": {"class": "text-nowrap"}})
     requester = tables.Column(attrs={"td": {"class": "text-nowrap"}})
     responsible_cd = tables.Column(verbose_name="CD", attrs={"td": {"class": "text-nowrap"}})
-    creation_date = tables.Column(
+    creation_date = tables.DateColumn(
         verbose_name="Criado em",
+        format="d-M-Y",
         attrs={"td": {"class": "text-nowrap font-monospace text-body-secondary"}},
     )
 
@@ -247,7 +248,7 @@ class CDPendingReviewTable(tables.Table):
     uploaded_at = tables.TemplateColumn(
         verbose_name="Enviado em",
         orderable=False,
-        template_code="""<small class="text-muted">{{ record.uploaded_at|date:"d/m/Y H:i" }}</small>""",
+        template_code="""<small class="text-muted">{{ record.uploaded_at|date:"d-M-Y H:i" }}</small>""",
     )
 
 
@@ -272,9 +273,9 @@ class ActivityTable(tables.Table):
     """
 
     time = tables.Column(
-        verbose_name="Hora",
+        verbose_name="Data / Hora",
         orderable=False,
-        attrs={"td": {"class": "text-muted small text-nowrap", "style": "width: 5.5rem;"}},
+        attrs={"td": {"class": "text-muted small text-nowrap", "style": "width: 11rem;"}},
     )
     description = tables.Column(
         verbose_name="Atividade",
@@ -290,7 +291,11 @@ class ActivityTable(tables.Table):
 class FullAuditLogTable(tables.Table):
     """Professional enterprise audit log table."""
 
-    timestamp = tables.Column(verbose_name="Hora", orderable=False, attrs={"td": {"class": "text-nowrout text-muted small"}})
+    timestamp = tables.Column(
+        verbose_name="Data / Hora",
+        orderable=False,
+        attrs={"td": {"class": "text-nowrap text-muted small"}},
+    )
     actor = tables.Column(verbose_name="Utilizador (Role)", orderable=False)
     action = tables.Column(verbose_name="Ação", orderable=False)
     object = tables.Column(verbose_name="Objeto", orderable=False)
@@ -328,7 +333,7 @@ class PendingECTable(tables.Table):
     )
     uploaded_at = tables.DateTimeColumn(
         verbose_name="Enviado em",
-        format="d/m/Y H:i",
+        format="d-M-Y H:i",
         orderable=False,
     )
     action = tables.TemplateColumn(
