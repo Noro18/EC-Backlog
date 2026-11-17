@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from auditlog.models import LogEntry
 from django.core.exceptions import ObjectDoesNotExist
@@ -179,31 +180,34 @@ def requester_dashboard(user) -> dict:
                 {"reference": data["reference"], "versions": len(versions)}
             )
             latest = versions[-1]
-            decision = latest["versions__review__decision"]
-            if decision == "approved":
-                st = EC.Status.APPROVED
-            elif decision == "rejected":
-                st = EC.Status.REJECTED
-                needs_action.append(
-                    {
-                        "id": ec_id,
-                        "reference": data["reference"],
-                        "version": latest["versions__version_number"],
-                        "comment": latest["versions__review__comment"],
-                        "cd": latest["versions__review__cd__username"],
-                        "decided_at": latest["versions__review__decided_at"],
-                    }
-                )
-            else:
-                st = data["db_status"]
         else:
-            st = data["db_status"]
+            latest = None
+
+        # Issue #96: `EC.status` is the single source of truth (SRD §7) and the
+        # `workflow` services keep it in sync (approve / reject / resubmit /
+        # route to DES). Re-deriving the status from the latest review decision
+        # made the dashboard disagree with the EC list at /backlog/ec/ (e.g. an
+        # EC closed after routing to DES still read "Aprovado"). The latest
+        # review is only read for display: the rejection comment in
+        # `needs_action` and `latest_comment`.
+        st = data["db_status"]
+        if st == EC.Status.REJECTED:
+            needs_action.append(
+                {
+                    "id": ec_id,
+                    "reference": data["reference"],
+                    "version": latest["versions__version_number"] if latest else "",
+                    "comment": latest["versions__review__comment"] if latest else "",
+                    "cd": latest["versions__review__cd__username"] if latest else None,
+                    "decided_at": latest["versions__review__decided_at"] if latest else None,
+                }
+            )
 
         if st in by_status:
             by_status[st] += 1
 
         version_list = [row["versions__version_number"] for row in versions]
-        latest_comment = latest["versions__review__comment"] if versions else ""
+        latest_comment = latest["versions__review__comment"] if latest else ""
 
         my_ecs.append(
             {
@@ -221,7 +225,13 @@ def requester_dashboard(user) -> dict:
         "ec_total": len(ecs),
         "versions_total": total_versions,
         "by_status": by_status,
-        "needs_action": sorted(needs_action, key=lambda item: item["decided_at"], reverse=True),
+        "needs_action": sorted(
+            needs_action,
+            # None-safe: a rejected EC whose Review row is missing (e.g.
+            # imported data) sorts as the oldest instead of crashing.
+            key=lambda item: item["decided_at"] or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        ),
         "versions_per_document": sorted(
             versions_per_document, key=lambda item: (-item["versions"], item["reference"])
         ),
