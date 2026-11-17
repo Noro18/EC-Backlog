@@ -211,6 +211,17 @@ class Command(BaseCommand):
                 decision=decision,
                 comment=comment,
             )
+        # Keep `EC.status` in sync with the decisions, exactly as the real
+        # `workflow` services would (issue #96: the dashboard reads `EC.status`).
+        decisions = [decision for _number, decision, _comment in versions]
+        if decisions and decisions[-1] is not None:
+            ec.status = (
+                EC.Status.APPROVED if decisions[-1] == "approved" else EC.Status.REJECTED
+            )
+        else:
+            # No decisions yet, or a new upload after a rejection (RF05).
+            ec.status = EC.Status.IN_VALIDATION
+        ec.save(update_fields=["status"])
 
     # -------------------------------------------------------------- summary
 
