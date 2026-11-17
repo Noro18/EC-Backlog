@@ -8,7 +8,6 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
 from datetime import timezone as dt_timezone
-from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.backlog.models import EC, Release

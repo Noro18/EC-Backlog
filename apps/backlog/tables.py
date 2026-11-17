@@ -200,6 +200,10 @@ class ECRequesterTable(tables.Table):
                 <span class="badge text-bg-success">Aprovado</span>
             {% elif record.status == "rejected" %}
                 <span class="badge text-bg-danger">Rejeitado</span>
+            
+            {% elif record.status == "closed" %}
+                <span class="badge text-bg-secondary">Closed</span>
+            
             {% elif record.status == "in_validation" %}
                 <span class="badge text-bg-warning text-dark">Em Validação</span>
             {% elif record.status == "sent_to_des" %}
