@@ -7,6 +7,9 @@ from django.db.models import Count, F, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
+from datetime import timezone as dt_timezone
+from django.utils import timezone
+
 from apps.accounts.models import User
 from apps.backlog.models import EC, Release
 
@@ -39,10 +42,6 @@ def releases_for_edit(current):
         .annotate(ec_total=Count("ecs"))
         .order_by("-year", "-number_sequence")
     )
-
-
-def ec_for_edit(current):
-    pass
 
 
 def dashboard_stats(user) -> dict:
@@ -229,7 +228,7 @@ def requester_dashboard(user) -> dict:
             needs_action,
             # None-safe: a rejected EC whose Review row is missing (e.g.
             # imported data) sorts as the oldest instead of crashing.
-            key=lambda item: item["decided_at"] or datetime.min.replace(tzinfo=timezone.utc),
+            key=lambda item: item["decided_at"] or datetime.min.replace(tzinfo=dt_timezone.utc),
             reverse=True,
         ),
         "versions_per_document": sorted(
