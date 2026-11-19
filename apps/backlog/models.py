@@ -53,12 +53,12 @@ class EC(TimeStampedModel):
     """
 
     class Status(models.TextChoices):
-        IN_VALIDATION = "in_validation", "In Validation"
-        APPROVED = "approved", "Approved"
-        REJECTED = "rejected", "Rejected"
-        SENT_TO_DES = "sent_to_des", "Sent to DES"
-        CLOSED = "closed", "Closed"
-        CANCELLED = "cancelled", "Cancelled"
+        IN_VALIDATION = "in_validation", "Em Validação"
+        APPROVED = "approved", "Approvado"
+        REJECTED = "rejected", "Rejeitado"
+        SENT_TO_DES = "sent_to_des", "Enviada para DES"
+        CLOSED = "closed", "Fechado"
+        CANCELLED = "cancelled", "Cancelado"
 
     id = models.BigAutoField(primary_key=True)
     year = models.PositiveSmallIntegerField()
