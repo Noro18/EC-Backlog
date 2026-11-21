@@ -29,6 +29,17 @@ class ECCreateForm(forms.ModelForm):
 
     REFERENCE_PREFIXES = ("CR", "RT", "COR")
 
+    description = forms.CharField(
+        required=True,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 4,
+                "placeholder": "Descreva a alteração técnica com clareza...",
+            }
+        ),
+    )
+
     class Meta:
         model = EC
         fields = ["reference", "description", "release", "responsible_cd"]
@@ -38,13 +49,6 @@ class ECCreateForm(forms.ModelForm):
                     "class": "form-control",
                     "placeholder": "ex.: CR2026042",
                     "autocomplete": "off",
-                }
-            ),
-            "description": forms.Textarea(
-                attrs={
-                    "class": "form-control",
-                    "rows": 4,
-                    "placeholder": "Descreva a alteração técnica com clareza...",
                 }
             ),
         }
