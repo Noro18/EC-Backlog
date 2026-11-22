@@ -2,13 +2,13 @@
 {% load static %}
 {% load render_table from django_tables2 %}
 
-{% block title %}Dashboard — Sistema de Gestão de Backlog EC{% endblock %}
+{% block title %}Painel — Sistema de Gestão de Backlog EC{% endblock %}
 
 {% block content %}
 
 <div class="dash-widgets">
     {% if user.role != 'administrator' %}
-    <h3 class="mb-1">Dashboard</h3>
+    <h3 class="mb-1">Painel</h3>
     <p class="text-muted mb-4">Visão geral e acompanhamento.</p>
     {% endif %}
 
