@@ -108,3 +108,10 @@ class EC(TimeStampedModel):
     @property
     def ec_code(self):
         return f"{self.year}-{self.number_sequence:03d}"
+
+    @property
+    def recent_versions(self):
+        # Related versions default to newest-first; keep the latest two and
+        # return them oldest-first for the version-chip display.
+        versions = list(self.versions.all())
+        return list(reversed(versions[:2]))

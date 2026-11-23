@@ -85,17 +85,45 @@ class ECTable(tables.Table):
         attrs={"td": {"class": "text-nowrap font-monospace text-body-secondary"}},
     )
 
-    status = tables.Column(verbose_name="Status", attrs={"th": {"class": "text-center"}})
+    status = tables.TemplateColumn(
+        verbose_name="Estado",
+        orderable=False,
+        template_code="""
+            {% if record.status == "approved" %}
+                <span class="badge text-bg-success">Aprovado</span>
+            {% elif record.status == "rejected" %}
+                <span class="badge text-bg-danger">Rejeitado</span>
+            
+            {% elif record.status == "closed" %}
+                <span class="badge text-bg-secondary">Fechada</span>
+            
+            {% elif record.status == "in_validation" %}
+                <span class="badge text-bg-warning text-dark">Em Validação</span>
+            {% elif record.status == "sent_to_des" %}
+                <span class="badge text-bg-info">Enviada para DES</span>
+            {% else %}
+                <span class="badge text-bg-secondary">{{ record.status }}</span>
+            {% endif %}
+        """,
+    )
+
+
     versions = tables.TemplateColumn(
         verbose_name="Versões",
         orderable=False,
         template_code="""
             <div class="d-flex align-items-center gap-1">
-                {% for v in record.versions.all reversed %}
+                {% for v in record.recent_versions %}
                     {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
-                    <span class="badge {% if forloop.last %}text-bg-dark{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
-                        {{ v.version_number }}
-                    </span>
+                    {% if forloop.last %}
+                        <span class="badge px-2 py-1" style="background-color: #FFC107; color: #000;">
+                            {{ v.version_number }}
+                        </span>
+                    {% else %}
+                        <span class="badge text-body-secondary px-2 py-1">
+                            {{ v.version_number }}
+                        </span>
+                    {% endif %}
                 {% empty %}
                     <span class="text-muted small">Sem versões</span>
                 {% endfor %}
@@ -114,11 +142,6 @@ class ECTable(tables.Table):
             {% endif %}
         """,
     )
-    def render_status(self, record):
-        badge_class = EC_BADGE_CLASSES.get(record.status, "text-bg-secondary")
-        return format_html(
-            '<span class="badge {}">{}</span>', badge_class, record.get_status_display()
-        )
 
     class Meta:
         model = EC
@@ -181,11 +204,21 @@ class ECRequesterTable(tables.Table):
         orderable=False,
         template_code="""
             <div class="d-flex align-items-center gap-1">
-                {% for v in record.versions %}
-                    {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
-                    <span class="badge {% if forloop.last %}text-bg-dark{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
-                        {{ v }}
-                    </span>
+                {# preview max 2 last vertion  #}
+                {% for v in record.versions|slice:"-2:" %}
+                    {# if it last version (the newest) #}
+                    {% if forloop.last %}
+                        {# new version still yellow #}
+                        <span class="badge px-2 py-1" style="background-color: #FFC107; color: #000;">
+                            {{ v }}
+                        </span>
+                    {# if this presious version (still in 2 version limit) #}
+                    {% else %}
+                        {# Last version: use standard class that can adapt with the theme #}
+                        <span class="badge text-body-secondary px-2 py-1">
+                            {{ v }}
+                        </span>
+                    {% endif %}
                 {% empty %}
                     <span class="text-muted small">Sem versões</span>
                 {% endfor %}
@@ -202,7 +235,7 @@ class ECRequesterTable(tables.Table):
                 <span class="badge text-bg-danger">Rejeitado</span>
             
             {% elif record.status == "closed" %}
-                <span class="badge text-bg-secondary">Closed</span>
+                <span class="badge text-bg-secondary">Fechada</span>
             
             {% elif record.status == "in_validation" %}
                 <span class="badge text-bg-warning text-dark">Em Validação</span>
@@ -237,11 +270,17 @@ class CDPendingReviewTable(tables.Table):
         orderable=False,
         template_code="""
             <div class="d-flex align-items-center gap-1">
-                {% for v in record.versions %}
+                {% for v in record.versions|slice:"-2:" %}
                     {% if not forloop.first %}<span class="text-muted small">→</span>{% endif %}
-                    <span class="badge {% if forloop.last %}text-bg-secondary{% else %}text-bg-light border text-body-secondary{% endif %} px-2 py-1">
-                        {{ v }}
-                    </span>
+                    {% if forloop.last %}
+                        <span class="badge px-2 py-1" style="background-color: #FFC107; color: #000;">
+                            {{ v }}
+                        </span>
+                    {% else %}
+                        <span class="badge text-body-secondary px-2 py-1">
+                            {{ v }}
+                        </span>
+                    {% endif %}
                 {% empty %}
                     <span class="text-muted small">Sem versões</span>
                 {% endfor %}
