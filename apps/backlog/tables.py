@@ -38,6 +38,19 @@ class ReleaseTable(tables.Table):
         empty_values=(),
         attrs={"th": {"class": "text-center"}},
     )
+    capacity_action = tables.TemplateColumn(
+        verbose_name="Ações",
+        orderable=False,
+        empty_values=(),
+        template_code="""
+            {% if request.user.role == "administrator" and record.is_open %}
+                <a href="{% url 'backlog:release_capacity_edit' record.id %}"
+                   class="btn btn-sm btn-outline-primary">Editar capacidade</a>
+            {% else %}
+                <span class="text-body-tertiary">—</span>
+            {% endif %}
+        """,
+    )
 
     def render_status(self, record):
         return format_html(
@@ -55,6 +68,7 @@ class ReleaseTable(tables.Table):
             "number_sequence",
             "ec_total",
             "status",
+            "capacity_action",
         )
         attrs = {"class": "table table-sm table-hover align-middle mb-0"}
         empty_text = "Nenhuma Release encontrada."
@@ -106,7 +120,6 @@ class ECTable(tables.Table):
             {% endif %}
         """,
     )
-
 
     versions = tables.TemplateColumn(
         verbose_name="Versões",
@@ -162,6 +175,7 @@ class ECTable(tables.Table):
         empty_text = "Nenhuma EC encontrada."
         per_page = 25
         order_by = ("-year", "-number_sequence")
+
 
 class ECDesTeamTable(tables.Table):
     ec_code = tables.TemplateColumn(
@@ -294,16 +308,15 @@ class CDPendingReviewTable(tables.Table):
         template_code="""<small class="text-muted">{{ record.uploaded_at|date:"d-M-Y H:i" }}</small>""",
     )
 
-
     actions = tables.TemplateColumn(
         verbose_name="Ações",
         orderable=False,
         template_code="""<a href="{% url 'backlog:ec_detail' record.id %}" class="btn btn-sm btn-outline-primary">Ver Detalhes</a>""",
         attrs={"th": {"class": "text-end"}, "td": {"class": "text-end"}},
     )
-    
+
     class Meta:
-        fields = ("ec_code", "versions", "uploaded_at", "actions") 
+        fields = ("ec_code", "versions", "uploaded_at", "actions")
         attrs = {"class": "table table-hover align-middle mb-0"}
         empty_text = "Nenhum EC pendente de revisão."
 
@@ -330,6 +343,7 @@ class ActivityTable(tables.Table):
         template_name = "django_tables2/bootstrap5.html"
         attrs = {"class": "table table-hover align-middle mb-0"}
         empty_text = "Sem atividade registada."
+
 
 class FullAuditLogTable(tables.Table):
     """Professional enterprise audit log table."""

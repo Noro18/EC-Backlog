@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Editar capacidade — {{ release.release_code }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Editar capacidade da Release</h3>
+        <p class="text-body-secondary mb-0">{{ release.release_code }}</p>
+    </div>
+    <a href="{% url 'backlog:release_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="card" style="max-width: 40rem;">
+    <div class="card-body">
+        <p class="text-body-secondary">
+            ECs associados atualmente: <strong>{{ ec_count }}</strong>.
+            A capacidade não pode ficar abaixo desse total.
+        </p>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-3">
+                {{ form.capacity.label_tag }}
+                {{ form.capacity }}
+                {% if form.capacity.help_text %}
+                    <div class="form-text">{{ form.capacity.help_text }}</div>
+                {% endif %}
+                {% for error in form.capacity.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Guardar capacidade
+                </button>
+                <a href="{% url 'backlog:release_list' %}" class="btn btn-outline-secondary">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

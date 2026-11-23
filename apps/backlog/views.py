@@ -16,7 +16,7 @@ from apps.workflow.notifications import (
     queue_cd_assigned,  # documented exception, ARCHITECTURE.md §5
 )
 
-from .forms import ECCreateForm, ECEditForm, ReleaseCreateForm
+from .forms import ECCreateForm, ECEditForm, ReleaseCapacityForm, ReleaseCreateForm
 from .models import EC, Release
 from .selectors import (
     admin_dashboard,
@@ -31,7 +31,14 @@ from .selectors import (
     search_ecs,
     visible_ecs,
 )
-from .services import can_edit_ec, create_ec, create_release, record_go_live, update_ec
+from .services import (
+    can_edit_ec,
+    create_ec,
+    create_release,
+    record_go_live,
+    update_ec,
+    update_release_capacity,
+)
 from .tables import (
     EC_BADGE_CLASSES,
     RELEASE_BADGE_CLASSES,
@@ -296,4 +303,47 @@ class NewReleaseView(LoginRequiredMixin, UserPassesTestMixin, FormView):
     def form_valid(self, form):
         release = create_release(capacity=form.cleaned_data["capacity"])
         messages.success(self.request, f"Release {release.release_code} criada com sucesso.")
+        return super().form_valid(form)
+
+
+class ReleaseCapacityEditView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    form_class = ReleaseCapacityForm
+    template_name = "backlog/release_capacity_form.html"
+    success_url = reverse_lazy("backlog:release_list")
+
+    def test_func(self):
+        return self.request.user.role == User.Role.ADMINISTRATOR
+
+    def get_release(self):
+        if not hasattr(self, "_release"):
+            self._release = get_object_or_404(
+                Release,
+                pk=self.kwargs["pk"],
+                is_open=True,
+            )
+        return self._release
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["release"] = self.get_release()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["release"] = self.get_release()
+        context["ec_count"] = self.get_release().ec_count
+        return context
+
+    def form_valid(self, form):
+        try:
+            release = update_release_capacity(
+                form.release,
+                self.request.user,
+                form.cleaned_data["capacity"],
+            )
+        except ValidationError as error:
+            form.add_error("capacity", error)
+            return self.form_invalid(form)
+
+        messages.success(self.request, f"Capacidade da Release {release.release_code} atualizada.")
         return super().form_valid(form)

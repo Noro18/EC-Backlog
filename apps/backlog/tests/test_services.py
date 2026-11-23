@@ -11,6 +11,7 @@ from apps.backlog.services import (
     create_release,
     next_ec_number,
     update_ec,
+    update_release_capacity,
 )
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 
@@ -182,6 +183,67 @@ class TestCreateRelease:
         assert calls["n"] == 2
         assert Release.objects.count() == 1
         assert release.number_sequence == 1
+
+
+class TestUpdateReleaseCapacity:
+    def test_administrator_changes_capacity_without_changing_other_release_data(self):
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+        release = ReleaseFactory(capacity=5, is_open=True)
+        ECFactory(release=release)
+        original_code = release.release_code
+        original_year = release.year
+        original_sequence = release.number_sequence
+
+        updated = update_release_capacity(release, administrator, 4)
+
+        assert updated.capacity == 4
+        assert updated.release_code == original_code
+        assert updated.year == original_year
+        assert updated.number_sequence == original_sequence
+        assert updated.is_open is True
+
+    def test_non_administrator_cannot_change_capacity(self):
+        release = ReleaseFactory(capacity=5)
+        requester = UserFactory(role=User.Role.REQUESTER)
+
+        with pytest.raises(PermissionDenied):
+            update_release_capacity(release, requester, 4)
+
+        release.refresh_from_db()
+        assert release.capacity == 5
+
+    def test_cannot_set_capacity_below_existing_ec_occupancy(self):
+        release = ReleaseFactory(capacity=5)
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+        for _ in range(3):
+            ECFactory(release=release)
+
+        with pytest.raises(ValidationError):
+            update_release_capacity(release, administrator, 2)
+
+        release.refresh_from_db()
+        assert release.capacity == 5
+
+    def test_closed_release_capacity_cannot_be_edited(self):
+        release = ReleaseFactory(capacity=5, is_open=False)
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+
+        with pytest.raises(ValidationError):
+            update_release_capacity(release, administrator, 4)
+
+        release.refresh_from_db()
+        assert release.capacity == 5
+
+    @pytest.mark.parametrize("capacity", [0, -1, 11])
+    def test_rejects_capacity_outside_domain_limit(self, capacity):
+        release = ReleaseFactory(capacity=5)
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+
+        with pytest.raises(ValidationError):
+            update_release_capacity(release, administrator, capacity)
+
+        release.refresh_from_db()
+        assert release.capacity == 5
 
 
 class TestUpdateEC:

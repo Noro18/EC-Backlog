@@ -2,7 +2,7 @@
 
 ## Status
 
-**Draft — requires user review and `SPEC_APPROVED` before implementation.**
+**Approved (`SPEC_APPROVED`).**
 
 ## Objective
 
@@ -96,7 +96,7 @@ creation and subsequent capacity changes.
 ### Create Release form input
 
 ```text
-POST /backlog/releases/new/
+POST /backlog/new_release/
 capacity=<integer>
 ```
 
@@ -107,7 +107,7 @@ cannot provide them.
 ### Edit capacity form input
 
 ```text
-POST /backlog/releases/<release_id>/capacity/
+POST /backlog/release/<release_id>/capacity/
 capacity=<integer>
 ```
 
@@ -140,20 +140,15 @@ URL and must resolve to an existing Release. No other Release field changes.
   HTTP 403 for direct GET and POST requests.
 - Unknown Release ID on edit: return HTTP 404.
 
-## Capacity rules and open decisions
+## Confirmed capacity rules
 
 1. **Allowed range:** preserve the architecture's maximum of 10 ECs; selected
    capacity must be from 1 to 10. The Administrator chooses the value per
    Release rather than being forced to use 10.
-2. **Lowering below current occupancy:** proposed rule: reject a capacity
-   smaller than the Release's current EC count, to avoid representing an
-   already-over-capacity Release. **User confirmation required.**
-3. **Closed Releases:** proposed scope permits editing any existing Release,
-   including closed Releases. **User confirmation required** if closed
-   Releases should instead be read-only.
-
-These proposed decisions must be confirmed before implementation. The
-architecture's maximum of 10 remains unchanged by this draft.
+2. **Lowering below current occupancy:** reject a capacity smaller than the
+   Release's current EC count.
+3. **Closed Releases:** capacity editing is available only while
+   `Release.is_open=True`. Closed Releases remain read-only.
 
 ## Edge cases
 
@@ -165,7 +160,8 @@ architecture's maximum of 10 remains unchanged by this draft.
 | Administrator creates Release with capacity 1–10 | Create it with the next generated Release ID and selected capacity. |
 | Release year has no prior sequence | Generate sequence 001 for the current year. |
 | Release ID collision occurs during concurrent creation | Preserve the existing service retry behavior; on exhaustion return a validation error and do not create a partial Release. |
-| Capacity is lowered below current EC count | Reject if the proposed occupancy rule is confirmed. |
+| Capacity is lowered below current EC count | Reject with a field error; stored capacity remains unchanged. |
+| Release is closed | Do not show an edit action; direct edit URL returns HTTP 404. |
 | Release does not exist on edit | Return HTTP 404. |
 | Request is made by requester, CD, or DES Team | Deny direct GET/POST with HTTP 403. |
 | User is logged out | Redirect to login. |
@@ -182,8 +178,8 @@ architecture's maximum of 10 remains unchanged by this draft.
 - An Administrator can edit the capacity of an existing Release through the
   application; no other Release field is editable in that flow.
 - Values outside the approved range are rejected without database changes.
-- Capacity cannot be reduced below occupancy if that proposed rule is
-  confirmed.
+- Capacity cannot be reduced below the current EC occupancy.
+- Closed Releases have no capacity edit action and cannot be edited by direct URL.
 - Non-Administrator users cannot create or edit Releases by navigating
   directly to the URLs.
 - Successful creation and capacity updates are represented in the audit log.
@@ -206,13 +202,14 @@ Write tests first (TDD):
 5. Editing a Release updates only capacity; other Release fields remain
    unchanged.
 6. Invalid capacity changes leave the database unchanged.
-7. Capacity below existing EC occupancy is rejected if confirmed.
+7. Capacity below existing EC occupancy is rejected and does not persist.
 8. Unknown Release ID on edit returns HTTP 404.
 9. Audit log contains Release creation and capacity update records.
 10. Existing on-demand EC creation continues to create its Release with
     capacity 10; invalid EC/document submissions do not leave orphan Releases.
 11. Existing EC creation refuses assignment when the configured Release
     capacity is reached.
+12. Closed Releases have no capacity edit action and reject direct edit requests.
 
 ## Out of scope
 

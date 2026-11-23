@@ -44,6 +44,31 @@ class ReleaseCreateForm(forms.Form):
     )
 
 
+class ReleaseCapacityForm(forms.Form):
+    """Change only the capacity of an existing, open Release."""
+
+    capacity = forms.IntegerField(
+        label="Capacidade da Release (ECs)",
+        min_value=1,
+        max_value=10,
+        help_text="Escolha um valor entre 1 e 10 ECs, sem ficar abaixo dos ECs existentes.",
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control",
+                "min": 1,
+                "max": 10,
+                "step": 1,
+            }
+        ),
+    )
+
+    def __init__(self, *args, release, **kwargs):
+        self.release = release
+        initial = kwargs.setdefault("initial", {})
+        initial.setdefault("capacity", release.capacity)
+        super().__init__(*args, **kwargs)
+
+
 class ECCreateForm(forms.ModelForm):
     """EC_CREATE.md Decision 1: validation lives here, saving lives in the service."""
 

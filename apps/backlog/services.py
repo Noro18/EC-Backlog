@@ -56,6 +56,25 @@ def create_release(capacity: int = 10) -> Release:
     raise ValidationError("La konsege kria Release; tenta fali.")
 
 
+def update_release_capacity(release: Release, user, capacity: int) -> Release:
+    """Change the capacity of an open Release; only Administrators may do so."""
+    if user.role != User.Role.ADMINISTRATOR:
+        raise PermissionDenied("Only an Administrator can change Release capacity.")
+    if not isinstance(capacity, int) or isinstance(capacity, bool) or not 1 <= capacity <= 10:
+        raise ValidationError("Release capacity must be between 1 and 10 ECs.")
+
+    with transaction.atomic():
+        fresh = Release.objects.get(pk=release.pk)
+        if not fresh.is_open:
+            raise ValidationError("Capacity cannot be changed for a closed Release.")
+        if fresh.ecs.count() > capacity:
+            raise ValidationError("Capacity cannot be less than the number of existing ECs.")
+
+        fresh.capacity = capacity
+        fresh.save(update_fields=["capacity"])
+    return fresh
+
+
 def create_ec(
     *,
     requester,

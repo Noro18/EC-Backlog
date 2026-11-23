@@ -124,7 +124,7 @@ class TestReleaseList:
         assert '<span class="badge text-bg-secondary">Concluído</span>' in html
         assert '<span class="badge text-bg-danger">Lotado</span>' in html
 
-    def test_code_links_to_detail_and_no_action_column(self, client):
+    def test_code_and_capacity_actions_render(self, client):
         release = ReleaseFactory()
         response = client.get(reverse("backlog:release_list"))
         table = response.context["table"]
@@ -132,7 +132,18 @@ class TestReleaseList:
         assert f'<a href="{reverse("backlog:release_detail", args=[release.pk])}"' in (
             response.content.decode()
         )
-        assert "action" not in table.columns.names()
+        assert "capacity_action" in table.columns.names()
+        assert reverse("backlog:release_capacity_edit", args=[release.pk]) in (
+            response.content.decode()
+        )
+
+    def test_capacity_edit_action_is_hidden_from_non_administrators(self, client):
+        release = ReleaseFactory()
+        client.force_login(UserFactory(role=User.Role.REQUESTER))
+
+        page = client.get(reverse("backlog:release_list")).content.decode()
+
+        assert reverse("backlog:release_capacity_edit", args=[release.pk]) not in page
 
 
 class TestNewRelease:
@@ -198,6 +209,81 @@ class TestNewRelease:
         assert response.status_code == 200
         assert response.context["form"].errors
         assert Release.objects.count() == 0
+
+
+class TestReleaseCapacityEdit:
+    @staticmethod
+    def _url(release):
+        return reverse("backlog:release_capacity_edit", args=[release.pk])
+
+    def test_administrator_sees_capacity_only_form_for_open_release(self, client):
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+        release = ReleaseFactory(capacity=6, is_open=True)
+        client.force_login(administrator)
+
+        response = client.get(self._url(release))
+
+        assert response.status_code == 200
+        assert list(response.context["form"].fields) == ["capacity"]
+        assert response.context["form"]["capacity"].value() == 6
+        assert release.release_code in response.content.decode()
+
+    def test_administrator_updates_only_capacity_and_auditlog_records_it(self, client):
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+        release = ReleaseFactory(capacity=6, is_open=True)
+        ECFactory(release=release)
+        before = (release.release_code, release.year, release.number_sequence, release.is_open)
+        client.force_login(administrator)
+
+        response = client.post(self._url(release), {"capacity": "4"})
+
+        assert response.status_code == 302
+        release.refresh_from_db()
+        assert release.capacity == 4
+        assert (
+            release.release_code,
+            release.year,
+            release.number_sequence,
+            release.is_open,
+        ) == before
+        assert (
+            LogEntry.objects.get_for_object(release).filter(action=LogEntry.Action.UPDATE).exists()
+        )
+
+    def test_capacity_cannot_be_reduced_below_occupancy(self, client):
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+        release = ReleaseFactory(capacity=6, is_open=True)
+        for _ in range(3):
+            ECFactory(release=release)
+        client.force_login(administrator)
+
+        response = client.post(self._url(release), {"capacity": "2"})
+
+        assert response.status_code == 200
+        assert response.context["form"].errors
+        release.refresh_from_db()
+        assert release.capacity == 6
+
+    def test_closed_release_has_no_edit_route(self, client):
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+        release = ReleaseFactory(capacity=6, is_open=False)
+        client.force_login(administrator)
+
+        assert client.get(self._url(release)).status_code == 404
+        assert client.post(self._url(release), {"capacity": "4"}).status_code == 404
+
+    @pytest.mark.parametrize(
+        "role",
+        [User.Role.REQUESTER, User.Role.CD, User.Role.DES_TEAM],
+    )
+    def test_non_administrators_cannot_view_or_post_capacity_edit(self, client, role):
+        release = ReleaseFactory(capacity=6, is_open=True)
+        client.force_login(UserFactory(role=role))
+
+        assert client.get(self._url(release)).status_code == 403
+        assert client.post(self._url(release), {"capacity": "4"}).status_code == 403
+        release.refresh_from_db()
+        assert release.capacity == 6
 
 
 class TestECListVisibility:

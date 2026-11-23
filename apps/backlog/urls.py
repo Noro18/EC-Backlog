@@ -8,6 +8,11 @@ urlpatterns = [
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
     path("ec/", views.ECListView.as_view(), name="ec_list"),
     path("release/", views.ReleaseListView.as_view(), name="release_list"),
+    path(
+        "release/<int:pk>/capacity/",
+        views.ReleaseCapacityEditView.as_view(),
+        name="release_capacity_edit",
+    ),
     path("new_ec/", views.NewECView.as_view(), name="ec_form"),
     path("detail_ec/<int:pk>/", views.ECDetailView.as_view(), name="ec_detail"),
     path("detail_ec/<int:pk>/editar/", views.ECUpdateView.as_view(), name="ec_edit"),
