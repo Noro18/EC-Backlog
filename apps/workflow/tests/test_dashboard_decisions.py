@@ -94,9 +94,7 @@ class TestRequesterDecisions:
         _upload(ec, "v1.0")
         approve_ec(ec, ec.responsible_cd)
 
-        from apps.workflow.services import route_to_des
 
-        from apps.workflow.services import route_to_des
 
         route_to_des(ec, user)
 

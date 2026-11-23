@@ -15,17 +15,17 @@
         <span class="badge {{ status_badge_class }}">{{ ec.get_status_display }}</span>
         {% if ec.status == "in_validation" and user.pk == ec.responsible_cd_id %}
         <a href="{% url 'workflow:review_ec' ec.pk %}" class="btn btn-warning btn-sm">
-            <i class="bi bi-clipboard-check"></i> Review
+            <i class="bi bi-clipboard-check"></i> Revisar
         </a>
         {% endif %}
         {% if ec.status == "rejected" and user.pk == ec.requester_id %}
         <a href="{% url 'workflow:resubmit_ec' ec.pk %}" class="btn btn-warning btn-sm">
-            <i class="bi bi-arrow-repeat"></i> Resubmit
+            <i class="bi bi-arrow-repeat"></i> Reenviar
         </a>
         {% endif %}
         {% if ec.status == "approved" and user.pk == ec.requester_id %}
         <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#sendToDesModal">
-            <i class="bi bi-send"></i> Send to DES
+            <i class="bi bi-send"></i> Enviada para DES
         </button>
         {% endif %}
         {% if can_edit %}
@@ -45,7 +45,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Send to DES?</h5>
+                <h5 class="modal-title">Enviada para DES?</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="No"></button>
             </div>
             <form method="post" action="{% url 'workflow:route_to_des' ec.pk %}">
