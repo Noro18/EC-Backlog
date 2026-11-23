@@ -5,7 +5,15 @@
 
 {% block content %}
 
-<h3 class="mb-3">Gestão de Releases</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <h3 class="mb-3">Gestão de Releases</h3>
+    {% if request.user.is_authenticated and request.user.role == 'administrator' %}
+    <a href="{% url 'backlog:release_form' %}" class="btn btn-info fw-semibold">
+        <i class="bi bi-plus-circle"></i> Nova Release
+    </a>
+    {%endif%}
+</div>
 
 <div class="card">
     <div class="card-body">

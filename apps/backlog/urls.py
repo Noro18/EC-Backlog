@@ -15,4 +15,5 @@ urlpatterns = [
     path("go_live/<int:pk>/", views.RecordGoLiveView.as_view(), name="go_live"),
     path("audit-log/", views.AuditLogListView.as_view(), name="audit_log"),
     path("pending-ecs/", views.PendingECListView.as_view(), name="pending_ecs"),
+    path("new_release/", views.NewReleaseView.as_view(), name="release_form"),
 ]

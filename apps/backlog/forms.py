@@ -24,6 +24,26 @@ class CDChoiceField(forms.ModelChoiceField):
         return obj.full_name or obj.username
 
 
+class ReleaseCreateForm(forms.Form):
+    """Administrator-selected capacity for a manually created Release."""
+
+    capacity = forms.IntegerField(
+        label="Capacidade da Release (ECs)",
+        min_value=1,
+        max_value=10,
+        help_text="Escolha um valor entre 1 e 10 ECs.",
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control",
+                "min": 1,
+                "max": 10,
+                "step": 1,
+                "placeholder": "ex.: 5",
+            }
+        ),
+    )
+
+
 class ECCreateForm(forms.ModelForm):
     """EC_CREATE.md Decision 1: validation lives here, saving lives in the service."""
 

@@ -29,12 +29,15 @@ def next_ec_number(year: int) -> int:
     return last_ec.number_sequence + 1
 
 
-def create_release() -> Release:
+def create_release(capacity: int = 10) -> Release:
     """RF02: mint the next Release of the current year (`TT_ON_AAAA-NNN`).
 
     Retries on unique-constraint races (two requesters minting at once):
     the loser re-reads the max sequence and tries the next number.
     """
+    if not isinstance(capacity, int) or isinstance(capacity, bool) or not 1 <= capacity <= 10:
+        raise ValidationError("Release capacity must be between 1 and 10 ECs.")
+
     year = timezone.localdate().year
     with transaction.atomic():
         for _ in range(3):
@@ -46,6 +49,7 @@ def create_release() -> Release:
                         release_code=f"TT_ON_{year}-{number:03d}",
                         year=year,
                         number_sequence=number,
+                        capacity=capacity,
                     )
             except IntegrityError:
                 continue

@@ -8,6 +8,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pytest
+from auditlog.models import LogEntry
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -132,6 +133,71 @@ class TestReleaseList:
             response.content.decode()
         )
         assert "action" not in table.columns.names()
+
+
+class TestNewRelease:
+    @staticmethod
+    def _url():
+        return reverse("backlog:release_form")
+
+    def test_administrator_sees_capacity_form(self, client):
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+
+        response = client.get(self._url())
+
+        assert response.status_code == 200
+        assert list(response.context["form"].fields) == ["capacity"]
+        assert "Nova Release" in response.content.decode()
+
+    def test_anonymous_user_is_redirected_to_login(self, client):
+        response = client.get(self._url())
+
+        assert response.status_code == 302
+        assert reverse("accounts:login") in response.url
+
+    @pytest.mark.parametrize(
+        "role",
+        [User.Role.REQUESTER, User.Role.CD, User.Role.DES_TEAM],
+    )
+    def test_non_administrator_cannot_open_or_submit_form(self, client, role):
+        client.force_login(UserFactory(role=role))
+
+        assert client.get(self._url()).status_code == 403
+        assert client.post(self._url(), {"capacity": 4}).status_code == 403
+        assert Release.objects.count() == 0
+
+    @pytest.mark.parametrize("capacity", [1, 4, 10])
+    def test_administrator_creates_release_with_selected_capacity(self, client, capacity):
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+        year = timezone.localdate().year
+        ReleaseFactory(year=year, number_sequence=3)
+
+        response = client.post(
+            self._url(),
+            {
+                "capacity": str(capacity),
+                "release_code": "FORGED_CODE",
+                "year": 1900,
+                "number_sequence": 999,
+            },
+        )
+
+        assert response.status_code == 302
+        release = Release.objects.get(year=year, number_sequence=4)
+        assert release.release_code == f"TT_ON_{year}-004"
+        assert release.capacity == capacity
+        assert release.is_open is True
+        assert LogEntry.objects.get_for_object(release).exists()
+
+    @pytest.mark.parametrize("capacity", ["", "abc", "0", "-1", "11"])
+    def test_invalid_capacity_does_not_create_release(self, client, capacity):
+        client.force_login(UserFactory(role=User.Role.ADMINISTRATOR))
+
+        response = client.post(self._url(), {"capacity": capacity})
+
+        assert response.status_code == 200
+        assert response.context["form"].errors
+        assert Release.objects.count() == 0
 
 
 class TestECListVisibility:

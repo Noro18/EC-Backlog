@@ -145,6 +145,18 @@ class TestCreateRelease:
 
         assert release.release_code == f"TT_ON_{year}-004"
 
+    def test_uses_requested_capacity(self):
+        release = create_release(capacity=4)
+
+        assert release.capacity == 4
+
+    @pytest.mark.parametrize("capacity", [0, -1, 11])
+    def test_rejects_capacity_outside_domain_limit(self, capacity):
+        with pytest.raises(ValidationError):
+            create_release(capacity=capacity)
+
+        assert Release.objects.count() == 0
+
     def test_ignores_other_years(self):
         year = timezone.localdate().year
         ReleaseFactory(year=year - 1, number_sequence=99)
@@ -189,9 +201,7 @@ class TestUpdateEC:
         requester = UserFactory(role=User.Role.REQUESTER)
         ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
 
-        updated = self._edit(
-            ec, requester, reference="CR2026999", description="Descrição revista"
-        )
+        updated = self._edit(ec, requester, reference="CR2026999", description="Descrição revista")
 
         assert updated.reference == "CR2026999"
         assert updated.description == "Descrição revista"
@@ -302,9 +312,7 @@ class TestUpdateEC:
         requester = UserFactory(role=User.Role.REQUESTER)
         old_cd = UserFactory(role=User.Role.CD)
         new_cd = UserFactory(role=User.Role.CD)
-        ec = ECFactory(
-            requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION
-        )
+        ec = ECFactory(requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION)
 
         updated = self._edit(ec, requester, responsible_cd=new_cd)
 
