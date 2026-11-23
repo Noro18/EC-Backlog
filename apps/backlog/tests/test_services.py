@@ -11,6 +11,7 @@ from apps.backlog.services import (
     create_release,
     next_ec_number,
     update_ec,
+    update_release_capacity,
 )
 from apps.backlog.tests.factories import ECFactory, ReleaseFactory, UserFactory
 
@@ -145,6 +146,18 @@ class TestCreateRelease:
 
         assert release.release_code == f"TT_ON_{year}-004"
 
+    def test_uses_requested_capacity(self):
+        release = create_release(capacity=4)
+
+        assert release.capacity == 4
+
+    @pytest.mark.parametrize("capacity", [0, -1, 11])
+    def test_rejects_capacity_outside_domain_limit(self, capacity):
+        with pytest.raises(ValidationError):
+            create_release(capacity=capacity)
+
+        assert Release.objects.count() == 0
+
     def test_ignores_other_years(self):
         year = timezone.localdate().year
         ReleaseFactory(year=year - 1, number_sequence=99)
@@ -172,6 +185,67 @@ class TestCreateRelease:
         assert release.number_sequence == 1
 
 
+class TestUpdateReleaseCapacity:
+    def test_administrator_changes_capacity_without_changing_other_release_data(self):
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+        release = ReleaseFactory(capacity=5, is_open=True)
+        ECFactory(release=release)
+        original_code = release.release_code
+        original_year = release.year
+        original_sequence = release.number_sequence
+
+        updated = update_release_capacity(release, administrator, 4)
+
+        assert updated.capacity == 4
+        assert updated.release_code == original_code
+        assert updated.year == original_year
+        assert updated.number_sequence == original_sequence
+        assert updated.is_open is True
+
+    def test_non_administrator_cannot_change_capacity(self):
+        release = ReleaseFactory(capacity=5)
+        requester = UserFactory(role=User.Role.REQUESTER)
+
+        with pytest.raises(PermissionDenied):
+            update_release_capacity(release, requester, 4)
+
+        release.refresh_from_db()
+        assert release.capacity == 5
+
+    def test_cannot_set_capacity_below_existing_ec_occupancy(self):
+        release = ReleaseFactory(capacity=5)
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+        for _ in range(3):
+            ECFactory(release=release)
+
+        with pytest.raises(ValidationError):
+            update_release_capacity(release, administrator, 2)
+
+        release.refresh_from_db()
+        assert release.capacity == 5
+
+    def test_closed_release_capacity_cannot_be_edited(self):
+        release = ReleaseFactory(capacity=5, is_open=False)
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+
+        with pytest.raises(ValidationError):
+            update_release_capacity(release, administrator, 4)
+
+        release.refresh_from_db()
+        assert release.capacity == 5
+
+    @pytest.mark.parametrize("capacity", [0, -1, 11])
+    def test_rejects_capacity_outside_domain_limit(self, capacity):
+        release = ReleaseFactory(capacity=5)
+        administrator = UserFactory(role=User.Role.ADMINISTRATOR)
+
+        with pytest.raises(ValidationError):
+            update_release_capacity(release, administrator, capacity)
+
+        release.refresh_from_db()
+        assert release.capacity == 5
+
+
 class TestUpdateEC:
     """EC_EDIT.md (issue #67): the rules for editing an EC that is still in flight."""
 
@@ -189,9 +263,7 @@ class TestUpdateEC:
         requester = UserFactory(role=User.Role.REQUESTER)
         ec = ECFactory(requester=requester, status=EC.Status.IN_VALIDATION)
 
-        updated = self._edit(
-            ec, requester, reference="CR2026999", description="Descrição revista"
-        )
+        updated = self._edit(ec, requester, reference="CR2026999", description="Descrição revista")
 
         assert updated.reference == "CR2026999"
         assert updated.description == "Descrição revista"
@@ -302,9 +374,7 @@ class TestUpdateEC:
         requester = UserFactory(role=User.Role.REQUESTER)
         old_cd = UserFactory(role=User.Role.CD)
         new_cd = UserFactory(role=User.Role.CD)
-        ec = ECFactory(
-            requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION
-        )
+        ec = ECFactory(requester=requester, responsible_cd=old_cd, status=EC.Status.IN_VALIDATION)
 
         updated = self._edit(ec, requester, responsible_cd=new_cd)
 

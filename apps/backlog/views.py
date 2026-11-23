@@ -7,7 +7,7 @@ from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, TemplateView, UpdateView, View
+from django.views.generic import CreateView, DetailView, FormView, TemplateView, UpdateView, View
 from django_tables2 import RequestConfig, SingleTableView
 
 from apps.accounts.models import User
@@ -16,7 +16,7 @@ from apps.workflow.notifications import (
     queue_cd_assigned,  # documented exception, ARCHITECTURE.md §5
 )
 
-from .forms import ECCreateForm, ECEditForm
+from .forms import ECCreateForm, ECEditForm, ReleaseCapacityForm, ReleaseCreateForm
 from .models import EC, Release
 from .selectors import (
     admin_dashboard,
@@ -31,7 +31,14 @@ from .selectors import (
     search_ecs,
     visible_ecs,
 )
-from .services import can_edit_ec, create_ec, create_release, record_go_live, update_ec
+from .services import (
+    can_edit_ec,
+    create_ec,
+    create_release,
+    record_go_live,
+    update_ec,
+    update_release_capacity,
+)
 from .tables import (
     EC_BADGE_CLASSES,
     RELEASE_BADGE_CLASSES,
@@ -61,7 +68,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         elif self.request.user.role == "cd":
             cd_data = cd_dashboard(self.request.user)
             context["cd"] = cd_data
-            context["cd_table"] = CDPendingReviewTable(cd_data["pending_review"], request=self.request)
+            context["cd_table"] = CDPendingReviewTable(
+                cd_data["pending_review"], request=self.request
+            )
         elif self.request.user.role == "des_team":
             des_data = des_team_dashboard(self.request.user)
             context["des"] = des_data
@@ -75,7 +84,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 context["admin"]["recent_logs"], request=self.request
             )
         return context
-    
+
 
 class ECListView(LoginRequiredMixin, SingleTableView):
     model = EC
@@ -85,10 +94,13 @@ class ECListView(LoginRequiredMixin, SingleTableView):
     def get_queryset(self):
         params = self.request.GET
         return search_ecs(
-            visible_ecs(self.request.user), # function visible_ecs ida ne'e bolu husi file selector.py
+            visible_ecs(
+                self.request.user
+            ),  # function visible_ecs ida ne'e bolu husi file selector.py
             q=params.get("q"),
             status=params.get("status"),
         ).prefetch_related("versions")
+
 
 class ReleaseListView(LoginRequiredMixin, SingleTableView):
     model = Release
@@ -250,6 +262,7 @@ class RecordGoLiveView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.success(request, f"Go-live de {self.release.release_code} registado.")
         return redirect("backlog:release_detail", pk=self.release.pk)
 
+
 class AuditLogListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView):
     """Administrator-only full audit log view."""
 
@@ -278,3 +291,59 @@ class PendingECListView(LoginRequiredMixin, UserPassesTestMixin, SingleTableView
     def get_queryset(self):
         return pending_ecs(self.request.user)
 
+
+class NewReleaseView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    form_class = ReleaseCreateForm
+    template_name = "backlog/release_form.html"
+    success_url = reverse_lazy("backlog:release_list")
+
+    def test_func(self):
+        return self.request.user.role == User.Role.ADMINISTRATOR
+
+    def form_valid(self, form):
+        release = create_release(capacity=form.cleaned_data["capacity"])
+        messages.success(self.request, f"Release {release.release_code} criada com sucesso.")
+        return super().form_valid(form)
+
+
+class ReleaseCapacityEditView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    form_class = ReleaseCapacityForm
+    template_name = "backlog/release_capacity_form.html"
+    success_url = reverse_lazy("backlog:release_list")
+
+    def test_func(self):
+        return self.request.user.role == User.Role.ADMINISTRATOR
+
+    def get_release(self):
+        if not hasattr(self, "_release"):
+            self._release = get_object_or_404(
+                Release,
+                pk=self.kwargs["pk"],
+                is_open=True,
+            )
+        return self._release
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["release"] = self.get_release()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["release"] = self.get_release()
+        context["ec_count"] = self.get_release().ec_count
+        return context
+
+    def form_valid(self, form):
+        try:
+            release = update_release_capacity(
+                form.release,
+                self.request.user,
+                form.cleaned_data["capacity"],
+            )
+        except ValidationError as error:
+            form.add_error("capacity", error)
+            return self.form_invalid(form)
+
+        messages.success(self.request, f"Capacidade da Release {release.release_code} atualizada.")
+        return super().form_valid(form)
