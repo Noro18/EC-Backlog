@@ -1,4 +1,4 @@
-# Spec: Administrator-managed Release capacity
+# Spec: Application Release creation and capacity management
 
 ## Status
 
@@ -6,174 +6,219 @@
 
 ## Objective
 
-Provide a page in the EC Backlog application where a user with the application
-role `Administrator` can view existing Releases and change their EC capacity.
-This is for editing existing Releases; creating a new Release is a separate
-workflow and is out of scope for this feature.
+Provide Release creation and capacity management in the EC Backlog application
+for users with the application role `Administrator`.
+
+- An Administrator can create a Release and explicitly choose its capacity
+  instead of silently using 10.
+- An Administrator can later edit an existing Release, but capacity is the
+  only editable field.
+- The system continues to generate the Release ID, year, and sequence.
+- These operations use the application UI and role permissions, not Django
+  Admin.
 
 ## Requirement traceability
 
-- **RF02:** Release association and capacity governs how many ECs a Release can
-  group. This feature provides controlled administration of that existing
-  capacity value.
-- **RNF01:** Only the Administrator application role can access and submit
-  capacity changes; authorization must be enforced by the server-side view and
-  service, not only by hiding UI controls.
-- **RNF02:** Changes to `Release.capacity` must remain visible in the existing
-  immutable audit trail provided by `django-auditlog`.
+- **RF02:** The system generates/associates Releases, each grouping ECs. This
+  feature exposes controlled Release creation and capacity configuration.
+- **RNF01:** Only the Administrator application role can create Releases or
+  change capacity. Authorization must be enforced server-side, not only by
+  hiding UI controls.
+- **RNF02:** Release creation and capacity changes remain recorded by the
+  existing immutable `django-auditlog` history.
 
-The SRD does not define a separate capacity-editing workflow. The architecture
-currently states that a Release has a maximum capacity of 10 ECs; that limit is
-preserved in this draft.
+The SRD does not define a standalone Release administration workflow. The
+architecture sets a maximum capacity of 10 ECs per Release; this draft keeps
+that existing limit.
 
 ## User flow
 
-1. An Administrator opens the Release capacity management page from the
-   application navigation or Release management page.
-2. The page lists Releases and their current EC count and capacity.
-3. The Administrator selects a Release and opens its capacity edit form.
-4. The form shows the Release code, current occupancy, and current capacity;
-   only the capacity is editable.
-5. On a valid submission, the application saves the capacity, records the
-   change through the existing audit log, and returns the Administrator to the
-   Release list with a success message.
-6. Invalid submissions leave the stored capacity unchanged and display a
-   field-level validation error.
+1. An Administrator opens Release management in the EC Backlog application.
+2. The list shows each Release, its EC occupancy, and capacity. It provides a
+   **Nova Release** action and an edit-capacity action for each Release.
+3. To create a Release, the Administrator opens the create form and enters a
+   capacity from 1 to 10. Capacity is required in this form; the UI does not
+   silently accept the model default of 10.
+4. On submission, the system generates the next Release ID for the current
+   year, sets `is_open=True`, saves the selected capacity, and returns to the
+   list with a success message.
+5. To edit a Release, the Administrator opens its capacity form. The form
+   displays the Release code, current EC occupancy, and current capacity; only
+   capacity can be changed.
+6. Invalid submissions leave the stored Release data unchanged and display
+   field-level validation errors.
 
 ## System architecture and affected components
 
-The feature belongs to `apps/backlog`, which owns `Release`, capacity rules,
-and Release management. Keep views thin and put the capacity update rule in a
-backlog service.
+The feature belongs to `apps/backlog`, which owns the `Release` model, Release
+ID generation, and capacity rules. Views stay thin; write-side business rules
+belong in `apps/backlog/services.py`.
 
 Expected components to add or update:
 
-- `apps/backlog/forms.py` — a focused form exposing only `capacity`.
-- `apps/backlog/services.py` — an update service enforcing administrator
-  authorization and capacity invariants.
-- `apps/backlog/views.py` — authenticated, Administrator-only list/edit views.
-- `apps/backlog/urls.py` — named routes for the capacity management and edit
-  pages.
-- `apps/backlog/tables.py` and/or `templates/backlog/release_list.html` — an
-  Administrator-only edit action for each existing Release.
-- `templates/base.html` — link the Administrator configuration navigation to
-  the capacity management page.
-- `templates/backlog/release_capacity_list.html` and
-  `templates/backlog/release_capacity_form.html` — list and edit UI, following
-  existing Portuguese UI conventions.
-- `apps/backlog/tests/` — service and view tests for validation, permissions,
-  successful edits, and auditability.
+- `apps/backlog/forms.py` — create form requiring capacity and update form
+  exposing only capacity.
+- `apps/backlog/services.py` — extend the existing Release creation service
+  with an optional capacity parameter, preserving its default of 10 for the
+  existing on-demand EC submission flow; add a capacity-update service that
+  enforces Administrator authorization and capacity invariants.
+- `apps/backlog/views.py` — authenticated, Administrator-only create and
+  capacity-edit views.
+- `apps/backlog/urls.py` — named application routes for Release creation and
+  capacity editing.
+- `apps/backlog/tables.py` and `templates/backlog/release_list.html` —
+  Administrator-only create and per-Release capacity-edit actions.
+- `templates/base.html` — link the Administrator's application navigation to
+  Release management.
+- `templates/backlog/release_form.html` and
+  `templates/backlog/release_capacity_form.html` — create and edit forms using
+  the existing Portuguese UI conventions.
+- `apps/backlog/tests/` — tests for ID generation, capacity validation,
+  permissions, updates, auditability, and existing on-demand behavior.
 
-Do not use Django Admin for this feature. Do not implement Release creation as
-part of these screens. Keep all model and service imports within the existing
-`backlog` app; no upward imports are needed.
+Do not use Django Admin for these operations. Keep imports within the
+`backlog` app; no upward imports are required.
 
 ## Data model and migrations
 
 `backlog.Release.capacity` already exists as a `PositiveSmallIntegerField`
 with a default of 10. No new model field, constraint, or database schema change
-is proposed; therefore no migration is expected. Update the existing field
-through the backlog service and preserve its current auditlog registration.
+is proposed, so no migration is expected. Application-driven Release creation
+must pass the Administrator-selected capacity to the existing Release
+creation service. The existing on-demand EC submission path continues to use
+capacity 10 unless explicitly scoped separately.
 
-## Input and output
+The existing `django-auditlog` registration for `Release` must record both
+creation and subsequent capacity changes.
 
-### Edit form input
+## Inputs and outputs
+
+### Create Release form input
+
+```text
+POST /backlog/releases/new/
+capacity=<integer>
+```
+
+Capacity is required and must be an integer from 1 through 10. Release code,
+year, sequence, and `is_open` are generated or set by the system; the client
+cannot provide them.
+
+### Edit capacity form input
 
 ```text
 POST /backlog/releases/<release_id>/capacity/
 capacity=<integer>
 ```
 
-The form must reject missing, non-integer, zero, negative, and values greater
-than 10. The Release identifier comes from the URL and must resolve to an
-existing Release. No other Release fields may be accepted from the form.
+The edit form accepts only capacity and rejects missing, non-integer, zero,
+negative, and values greater than 10. The Release identifier comes from the
+URL and must resolve to an existing Release. No other Release field changes.
 
-### Successful output
+### Successful create output
 
-- Persist the new capacity for the selected Release.
-- Return a redirect to the Release capacity list.
-- Show a success message naming the Release.
-- Ensure the new value is recorded in `django-auditlog`.
+- Create the next Release for the current year using the existing
+  `TT_ON_AAAA-NNN` format and sequence rules.
+- Persist the selected capacity and `is_open=True`.
+- Redirect to the Release list and display a success message with the new code.
+- Record the creation through the existing audit log.
+
+### Successful edit output
+
+- Persist the selected capacity for the existing Release, changing no other
+  fields.
+- Redirect to the Release list and display a success message.
+- Record the capacity change through the existing audit log.
 
 ### Invalid or unauthorized output
 
-- Invalid capacity: re-render the form with validation errors; do not update
-  the Release.
-- Anonymous user: redirect to login, consistent with existing authenticated
+- Invalid capacity: re-render the relevant form with validation errors; do not
+  modify persisted data.
+- Anonymous user: redirect to login, consistent with authenticated
   application views.
 - Authenticated user whose application role is not `Administrator`: return
   HTTP 403 for direct GET and POST requests.
-- Unknown Release ID: return HTTP 404.
+- Unknown Release ID on edit: return HTTP 404.
 
 ## Capacity rules and open decisions
 
-1. **Maximum capacity:** this draft preserves the architecture's maximum of
-   10 ECs. The feature does not permit capacity values greater than 10.
+1. **Allowed range:** preserve the architecture's maximum of 10 ECs; selected
+   capacity must be from 1 to 10. The Administrator chooses the value per
+   Release rather than being forced to use 10.
 2. **Lowering below current occupancy:** proposed rule: reject a capacity
-   smaller than the Release's current EC count. This avoids representing a
-   Release as already over capacity. **User confirmation required.**
-3. **Closed Releases:** proposed scope allows editing capacity for any existing
-   Release, including closed Releases, because the request says existing
-   Release capacity. **User confirmation required** if closed Releases should
-   instead be read-only.
+   smaller than the Release's current EC count, to avoid representing an
+   already-over-capacity Release. **User confirmation required.**
+3. **Closed Releases:** proposed scope permits editing any existing Release,
+   including closed Releases. **User confirmation required** if closed
+   Releases should instead be read-only.
 
-These decisions must be confirmed before implementation. No capacity value
-change may bypass the constraints in this spec after approval.
+These proposed decisions must be confirmed before implementation. The
+architecture's maximum of 10 remains unchanged by this draft.
 
 ## Edge cases
 
 | Case | Expected behavior |
 |---|---|
-| Capacity is omitted or not an integer | Reject with a form error; stored value remains unchanged. |
-| Capacity is 0 or negative | Reject with a form error. |
+| Create form omits capacity | Reject with a field error; do not silently use 10. |
+| Capacity is not an integer, zero, or negative | Reject with a form error; stored data remains unchanged. |
 | Capacity is greater than 10 | Reject with a form error. |
-| Proposed capacity is below current EC count | Reject if the proposed occupancy rule is confirmed. |
-| Release does not exist | Return HTTP 404. |
+| Administrator creates Release with capacity 1–10 | Create it with the next generated Release ID and selected capacity. |
+| Release year has no prior sequence | Generate sequence 001 for the current year. |
+| Release ID collision occurs during concurrent creation | Preserve the existing service retry behavior; on exhaustion return a validation error and do not create a partial Release. |
+| Capacity is lowered below current EC count | Reject if the proposed occupancy rule is confirmed. |
+| Release does not exist on edit | Return HTTP 404. |
 | Request is made by requester, CD, or DES Team | Deny direct GET/POST with HTTP 403. |
 | User is logged out | Redirect to login. |
-| POST is invalid or authorization fails | Do not modify the Release or its EC associations. |
-| Two administrators update a capacity close together | Validate against the latest persisted EC count and capacity in the service transaction; do not rely on SQLite `select_for_update()` for row locking. |
+| Existing on-demand EC submission creates a Release | Continue using capacity 10 and existing atomic/rollback behavior. |
+| Two Administrators update capacity close together | Validate against the latest persisted EC count inside the service transaction; do not rely on SQLite `select_for_update()` for row-level locking. |
 
 ## Acceptance criteria
 
-- An Administrator can open the capacity management page and see existing
-  Release codes, current occupancy, and current capacity.
-- An Administrator can edit the capacity of an existing Release using the
-  application UI without entering Django Admin.
-- Only the capacity field is changed by the edit form.
-- Values outside the approved range are rejected without modifying the
-  database.
+- An Administrator can see existing Release codes, occupancy, and capacities
+  in the application.
+- An Administrator can create a Release through the application and choose a
+  required capacity from 1 through 10.
+- The Release code, year, and sequence are generated automatically.
+- An Administrator can edit the capacity of an existing Release through the
+  application; no other Release field is editable in that flow.
+- Values outside the approved range are rejected without database changes.
 - Capacity cannot be reduced below occupancy if that proposed rule is
   confirmed.
-- Non-Administrator users cannot access or submit the update by navigating
-  directly to the URL.
-- Successful changes appear in the existing audit log.
-- Existing Release creation, EC assignment, and capacity enforcement
-  behavior continue to work.
-- The implementation adds no schema migration unless later approval changes
-  this data contract.
+- Non-Administrator users cannot create or edit Releases by navigating
+  directly to the URLs.
+- Successful creation and capacity updates are represented in the audit log.
+- Existing on-demand Release creation and EC capacity enforcement continue to
+  work.
+- No schema migration is introduced.
 
 ## Test plan
 
-Add tests before implementation (TDD):
+Write tests first (TDD):
 
-1. Administrator can access the list and edit form.
-2. Requester, CD, and DES Team receive 403 for direct GET and POST.
-3. Anonymous users are redirected to login.
-4. Valid capacity updates the selected Release and redirects with success.
-5. Missing, non-integer, zero, negative, and above-10 values are rejected;
-   database values remain unchanged.
-6. Capacity below current occupancy is rejected if confirmed.
-7. Unknown Release ID returns 404.
-8. A successful capacity update generates an auditlog update.
-9. Existing capacity checks in EC creation still refuse an EC when the
-   Release's configured capacity is reached.
+1. Administrator can access the Release list, create form, and capacity-edit
+   form.
+2. Requester, CD, and DES Team receive HTTP 403 for direct GET and POST to
+   create/edit routes; anonymous users are redirected to login.
+3. Creating a Release with capacity 1, an intermediate value, and 10 saves the
+   chosen capacity and generates the next expected Release ID.
+4. Create submission without capacity or with invalid/out-of-range values is
+   rejected and creates no Release.
+5. Editing a Release updates only capacity; other Release fields remain
+   unchanged.
+6. Invalid capacity changes leave the database unchanged.
+7. Capacity below existing EC occupancy is rejected if confirmed.
+8. Unknown Release ID on edit returns HTTP 404.
+9. Audit log contains Release creation and capacity update records.
+10. Existing on-demand EC creation continues to create its Release with
+    capacity 10; invalid EC/document submissions do not leave orphan Releases.
+11. Existing EC creation refuses assignment when the configured Release
+    capacity is reached.
 
 ## Out of scope
 
-- Creating or deleting Releases.
-- Changing Release codes, years, sequence numbers, or go-live dates.
-- Opening or closing Releases manually.
-- Raising the architecture's maximum capacity above 10.
-- Editing capacity through Django Admin.
+- Deleting Releases.
+- Manually entering or editing Release codes, years, or sequence numbers.
+- Manually changing `is_open` or Production Go-Live Date from these forms.
+- Changing the architecture's maximum capacity above 10.
+- Editing Releases through Django Admin.
 - Changing the `Release` database schema.
