@@ -145,6 +145,47 @@ class TestReleaseList:
 
         assert reverse("backlog:release_capacity_edit", args=[release.pk]) not in page
 
+    def test_year_filter_shows_only_that_year(self, client):
+        """issue #104 — ?year=2026 keeps the 2026 release, hides the 2025 one."""
+        current = ReleaseFactory(year=2026, number_sequence=7)
+        older = ReleaseFactory(year=2025, number_sequence=7)
+
+        page = client.get(reverse("backlog:release_list") + "?year=2026").content.decode()
+
+        assert current.release_code in page
+        assert older.release_code not in page
+
+    def test_year_dropdown_lists_every_year_newest_first(self, client):
+        ReleaseFactory(year=2024, number_sequence=1)
+        ReleaseFactory(year=2026, number_sequence=1)
+
+        page = client.get(reverse("backlog:release_list")).content.decode()
+
+        assert 'value="2026"' in page
+        assert 'value="2024"' in page
+        assert page.index('value="2026"') < page.index('value="2024"')
+
+    def test_year_dropdown_keeps_the_selected_year(self, client):
+        ReleaseFactory(year=2025, number_sequence=1)
+
+        page = client.get(reverse("backlog:release_list") + "?year=2025").content.decode()
+
+        assert '<option value="2025" selected>' in page
+
+    def test_invalid_year_param_does_not_crash(self, client):
+        ReleaseFactory(year=2026, number_sequence=1)
+
+        response = client.get(reverse("backlog:release_list") + "?year=abc")
+
+        assert response.status_code == 200
+
+    def test_empty_year_result_shows_empty_text(self, client):
+        ReleaseFactory(year=2026, number_sequence=1)
+
+        page = client.get(reverse("backlog:release_list") + "?year=1999").content.decode()
+
+        assert "Nenhuma Release encontrada." in page
+
 
 class TestNewRelease:
     @staticmethod

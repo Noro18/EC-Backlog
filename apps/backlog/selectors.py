@@ -13,9 +13,20 @@ from apps.accounts.models import User
 from apps.backlog.models import EC, Release
 
 
-def release_with_ec_count():
-    """Return a queryset of releases annotated with the number of ECs."""
-    return Release.objects.annotate(ec_total=Count("ecs")).order_by("-year", "-number_sequence")
+def release_with_ec_count(year=None):
+    """Return a queryset of releases annotated with the number of ECs.
+
+    `year` (optional) narrows the list to one calendar year — used by the
+    toolbar on the release list (issue #104). Invalid input is ignored so a
+    hand-edited URL never crashes the view.
+    """
+    qs = Release.objects.annotate(ec_total=Count("ecs")).order_by("-year", "-number_sequence")
+    if year:
+        try:
+            qs = qs.filter(year=int(year))
+        except (TypeError, ValueError):
+            pass
+    return qs
 
 
 def open_releases_with_ec_count():

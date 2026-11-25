@@ -15,6 +15,25 @@
     {%endif%}
 </div>
 
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <select name="year" class="form-select form-select-sm">
+                    <option value="">Todos os anos</option>
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if request.GET.year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-8 text-md-end">
+                <button type="submit" class="btn btn-sm btn-outline-success px-3">Filtrar</button>
+                <a href="{% url 'backlog:release_list' %}" class="btn btn-sm btn-outline-danger px-3">Limpar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">

@@ -108,7 +108,17 @@ class ReleaseListView(LoginRequiredMixin, SingleTableView):
     template_name = "backlog/release_list.html"
 
     def get_queryset(self):  # this is reserved function
-        return release_with_ec_count()
+        # issue #104 — mirror the EC list pattern: read the GET param, hand it
+        # to the selector. An empty `?year=` behaves like no filter at all.
+        return release_with_ec_count(year=self.request.GET.get("year") or None)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Distinct years present in the table feed the toolbar dropdown.
+        context["years"] = sorted(
+            Release.objects.values_list("year", flat=True).distinct(), reverse=True
+        )
+        return context
 
 
 class NewECView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
