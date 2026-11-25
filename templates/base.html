@@ -71,10 +71,10 @@
                 {% comment %} <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-bar-chart"></i> Relatórios</a></li> {% endcomment %}
             </ul>
 
-            <p class="nav-section">Administração</p>
+            {% comment %} <p class="nav-section">Administração</p>
             <ul class="nav flex-column mb-4">
                 <li class="nav-item"><a href="{% url 'backlog:release_list' %}" class="nav-link"><i class="bi bi-gear"></i> Configurações de Releases</a></li>
-            </ul>
+            </ul> {% endcomment %}
             {% endif %}
         </aside>
 
