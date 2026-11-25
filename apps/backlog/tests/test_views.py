@@ -58,7 +58,9 @@ class TestReleaseList:
 
     def test_shows_releases_from_the_database(self, client):
         release = ReleaseFactory(year=2027, number_sequence=99)
-        response = client.get(reverse("backlog:release_list"))
+        # ?year= → "Todos os anos": proves the table renders DB rows at all,
+        # independent of what the current calendar year happens to be.
+        response = client.get(reverse("backlog:release_list") + "?year=")
         assert release.release_code in response.content.decode()
 
     def test_query_count_does_not_grow_with_rows(self, client):
@@ -79,7 +81,7 @@ class TestReleaseList:
         release = ReleaseFactory(capacity=5)
         ECFactory(release=release)
         ECFactory(release=release)
-        html = client.get(reverse("backlog:release_list")).content.decode()
+        html = client.get(reverse("backlog:release_list") + "?year=").content.decode()
 
         assert "2 / 5" in html
 
@@ -87,20 +89,20 @@ class TestReleaseList:
         release = ReleaseFactory(capacity=2)
         ECFactory(release=release)
         ECFactory(release=release)
-        html = client.get(reverse("backlog:release_list")).content.decode()
+        html = client.get(reverse("backlog:release_list") + "?year=").content.decode()
 
         assert "Lotado" in html
 
     def test_capacity_aberta(self, client):
         release = ReleaseFactory(capacity=3)
         ECFactory(release=release)
-        html = client.get(reverse("backlog:release_list")).content.decode()
+        html = client.get(reverse("backlog:release_list") + "?year=").content.decode()
 
         assert "Aberta" in html
 
     def test_capacity_concluido(self, client):
         ReleaseFactory(capacity=3, is_open=False)
-        html = client.get(reverse("backlog:release_list")).content.decode()
+        html = client.get(reverse("backlog:release_list") + "?year=").content.decode()
 
         assert "Concluído" in html
 
@@ -108,7 +110,7 @@ class TestReleaseList:
         release = ReleaseFactory(capacity=2, is_open=False)
         ECFactory(release=release)
         ECFactory(release=release)
-        html = client.get(reverse("backlog:release_list")).content.decode()
+        html = client.get(reverse("backlog:release_list") + "?year=").content.decode()
 
         assert "Concluído" in html
 
@@ -118,7 +120,7 @@ class TestReleaseList:
         ReleaseFactory(capacity=3, is_open=False)
         full_release = ReleaseFactory(capacity=1)
         ECFactory(release=full_release)
-        html = client.get(reverse("backlog:release_list")).content.decode()
+        html = client.get(reverse("backlog:release_list") + "?year=").content.decode()
 
         assert '<span class="badge text-bg-success">Aberta</span>' in html
         assert '<span class="badge text-bg-secondary">Concluído</span>' in html
@@ -126,7 +128,7 @@ class TestReleaseList:
 
     def test_code_and_capacity_actions_render(self, client):
         release = ReleaseFactory()
-        response = client.get(reverse("backlog:release_list"))
+        response = client.get(reverse("backlog:release_list") + "?year=")
         table = response.context["table"]
 
         assert f'<a href="{reverse("backlog:release_detail", args=[release.pk])}"' in (
@@ -141,7 +143,7 @@ class TestReleaseList:
         release = ReleaseFactory()
         client.force_login(UserFactory(role=User.Role.REQUESTER))
 
-        page = client.get(reverse("backlog:release_list")).content.decode()
+        page = client.get(reverse("backlog:release_list") + "?year=").content.decode()
 
         assert reverse("backlog:release_capacity_edit", args=[release.pk]) not in page
 
@@ -159,7 +161,7 @@ class TestReleaseList:
         ReleaseFactory(year=2024, number_sequence=1)
         ReleaseFactory(year=2026, number_sequence=1)
 
-        page = client.get(reverse("backlog:release_list")).content.decode()
+        page = client.get(reverse("backlog:release_list") + "?year=").content.decode()
 
         assert 'value="2026"' in page
         assert 'value="2024"' in page
@@ -185,6 +187,35 @@ class TestReleaseList:
         page = client.get(reverse("backlog:release_list") + "?year=1999").content.decode()
 
         assert "Nenhuma Release encontrada." in page
+
+    def test_defaults_to_current_year(self, client):
+        """No ?year= → the list opens on the current calendar year (issue #104)."""
+        this_year = timezone.localdate().year
+        current = ReleaseFactory(year=this_year, number_sequence=1)
+        older = ReleaseFactory(year=this_year - 1, number_sequence=1)
+
+        page = client.get(reverse("backlog:release_list")).content.decode()
+
+        assert current.release_code in page
+        assert older.release_code not in page
+
+    def test_dropdown_marks_current_year_selected_by_default(self, client):
+        this_year = timezone.localdate().year
+
+        page = client.get(reverse("backlog:release_list")).content.decode()
+
+        assert f'<option value="{this_year}" selected>' in page
+
+    def test_empty_year_param_shows_every_year(self, client):
+        """?year= ("Todos os anos") overrides the default and lists everything."""
+        this_year = timezone.localdate().year
+        current = ReleaseFactory(year=this_year, number_sequence=1)
+        older = ReleaseFactory(year=this_year - 1, number_sequence=2)
+
+        page = client.get(reverse("backlog:release_list") + "?year=").content.decode()
+
+        assert current.release_code in page
+        assert older.release_code in page
 
 
 class TestNewRelease:

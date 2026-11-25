@@ -7,6 +7,7 @@ from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import CreateView, DetailView, FormView, TemplateView, UpdateView, View
 from django_tables2 import RequestConfig, SingleTableView
 
@@ -109,15 +110,24 @@ class ReleaseListView(LoginRequiredMixin, SingleTableView):
 
     def get_queryset(self):  # this is reserved function
         # issue #104 — mirror the EC list pattern: read the GET param, hand it
-        # to the selector. An empty `?year=` behaves like no filter at all.
-        return release_with_ec_count(year=self.request.GET.get("year") or None)
+        # to the selector. No ?year= at all → default to the current year;
+        # an explicit ?year= (including the empty "Todos os anos") wins.
+        year = self.request.GET.get("year")
+        if year is None:
+            year = timezone.localdate().year
+        return release_with_ec_count(year=year or None)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Distinct years present in the table feed the toolbar dropdown.
-        context["years"] = sorted(
-            Release.objects.values_list("year", flat=True).distinct(), reverse=True
-        )
+        # Distinct years present in the table feed the toolbar dropdown; the
+        # current year is always listed so the default option exists even in
+        # a database that has no release for it yet.
+        years = set(Release.objects.values_list("year", flat=True).distinct())
+        years.add(timezone.localdate().year)
+        context["years"] = sorted(years, reverse=True)
+
+        selected = self.request.GET.get("year")
+        context["selected_year"] = str(timezone.localdate().year) if selected is None else selected
         return context
 
 

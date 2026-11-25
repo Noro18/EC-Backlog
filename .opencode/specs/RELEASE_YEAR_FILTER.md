@@ -18,10 +18,14 @@ This specification covers the implementation of year-based filtering on the Rele
 - **None**. Both `Release` (`year`) and `EC` (`year`, `release`) models already have the required fields. No database migrations are required.
 
 ## 4. Edge Cases & Handling
+- **Default Year**: When the page is opened without any `?year=` parameter, the filter defaults to the **current calendar year** (`timezone.localdate().year`). An explicit `?year=` — including the empty value emitted by the "Todos os anos" option — always overrides the default and lists every year.
 - **Year Mismatch (Historical & Cross-Year Releases)**: ECs submitted in one year may belong to a release of another year (especially in historical imports 2019–2026). The detail view should primarily show ECs linked via `release.ecs`, while allowing clear visibility of their respective years.
-- **Empty Filter Results**: If a user filters releases by a year with no releases, render the existing `empty_text` ("Nenhuma Release encontrada.").
+- **Invalid Year**: A non-numeric `?year=abc` must not crash the view (HTTP 200); the selector ignores the unparsable value.
+- **Empty Filter Results**: If a user filters releases by a year with no releases, render the existing `empty_text` ("Nenhuma Release encontrada."). The current year is always offered in the dropdown even when no release exists for it yet.
 
 ## 5. Acceptance Criteria
 1. The Release list page features a year filter input/dropdown that successfully filters the table by the selected calendar year.
-2. The Release detail page correctly lists all ECs belonging to that release.
-3. All existing tests pass (`uv run pytest`), and new tests cover the year filtering functionality.
+2. Opening the Release list with no `?year=` parameter shows the current calendar year by default (table and dropdown selection).
+3. The "Todos os anos" option (`?year=`) clears the default and shows releases from every year.
+4. The Release detail page correctly lists all ECs belonging to that release.
+5. All existing tests pass (`uv run pytest`), and new tests cover the year filtering functionality.

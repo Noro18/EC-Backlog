@@ -20,9 +20,9 @@
         <form method="get" class="row g-2 align-items-center">
             <div class="col-md-4">
                 <select name="year" class="form-select form-select-sm">
-                    <option value="">Todos os anos</option>
+                    <option value="" {% if selected_year == "" %}selected{% endif %}>Todos os anos</option>
                     {% for y in years %}
-                    <option value="{{ y }}" {% if request.GET.year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+                    <option value="{{ y }}" {% if selected_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
                     {% endfor %}
                 </select>
             </div>
